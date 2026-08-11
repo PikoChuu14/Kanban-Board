@@ -3,6 +3,7 @@ package com.company.kanban.controller;
 import com.company.kanban.dto.CreateTaskRequest;
 import com.company.kanban.dto.MoveTaskRequest;
 import com.company.kanban.dto.TaskResponse;
+import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -42,5 +43,13 @@ public class TaskController {
             @Valid @RequestBody MoveTaskRequest request) {
 
         return taskService.moveTask(taskId, request);
+    }
+
+    @PutMapping("/{taskId}")
+    public TaskResponse updateTask(
+            @PathVariable Long taskId,
+            @Valid @RequestBody UpdateTaskRequest request) {
+
+        return taskService.updateTask(taskId, request);
     }
 }

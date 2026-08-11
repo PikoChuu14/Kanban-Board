@@ -3,6 +3,7 @@ package com.company.kanban.service;
 import com.company.kanban.dto.CreateTaskRequest;
 import com.company.kanban.dto.MoveTaskRequest;
 import com.company.kanban.dto.TaskResponse;
+import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Task;
 import com.company.kanban.entity.User;
@@ -11,9 +12,8 @@ import com.company.kanban.repository.TaskRepository;
 import com.company.kanban.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
-import com.company.kanban.dto.MoveTaskRequest;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -81,6 +81,43 @@ public class TaskService {
                 column,
                 assignee
         );
+
+        Task savedTask = taskRepository.save(task);
+
+        return toResponse(savedTask);
+    }
+
+    @Transactional
+    public TaskResponse updateTask(
+            Long taskId,
+            UpdateTaskRequest request) {
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Task not found"
+                        )
+                );
+
+        User assignee = null;
+
+        if (request.assigneeId() != null) {
+            assignee = userRepository
+                    .findById(request.assigneeId())
+                    .orElseThrow(() ->
+                            new ResponseStatusException(
+                                    HttpStatus.NOT_FOUND,
+                                    "Assignee not found"
+                            )
+                    );
+        }
+
+        task.setTitle(request.title());
+        task.setDescription(request.description());
+        task.setPriority(request.priority());
+        task.setDueDate(request.dueDate());
+        task.setAssignee(assignee);
 
         Task savedTask = taskRepository.save(task);
 

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
+import EditTaskModal from "./components/EditTaskModal";
 
 const API_BASE_URL = "http://localhost:8080";
+const DRAG_START_THRESHOLD = 6;
 
 function TaskCardContent({ task }) {
   return (
@@ -29,11 +31,13 @@ function App() {
   const [tasksByColumn, setTasksByColumn] = useState({});
   const [users, setUsers] = useState([]);
   const [selectedColumn, setSelectedColumn] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
   const draggedTaskRef = useRef(null);
   const dropIndicatorRef = useRef(null);
+  const pointerDownRef = useRef(null);
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
 
@@ -122,6 +126,7 @@ function App() {
   function clearDragState() {
     draggedTaskRef.current = null;
     dropIndicatorRef.current = null;
+    pointerDownRef.current = null;
     setDraggedTask(null);
     setDropIndicator(null);
     setDragPreview(null);
@@ -166,31 +171,55 @@ function App() {
       return;
     }
 
-    event.preventDefault();
-
     const card = event.currentTarget;
     const rect = card.getBoundingClientRect();
-    const preview = {
+    pointerDownRef.current = {
       task,
-      x: event.clientX,
-      y: event.clientY,
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
       width: rect.width,
     };
+  }
 
-    draggedTaskRef.current = task;
+  function shouldStartDrag(pointerDown, event) {
+    const distanceX = Math.abs(event.clientX - pointerDown.startX);
+    const distanceY = Math.abs(event.clientY - pointerDown.startY);
+
+    return Math.max(distanceX, distanceY) >= DRAG_START_THRESHOLD;
+  }
+
+  function startDrag(pointerDown, event) {
+    draggedTaskRef.current = pointerDown.task;
     dropIndicatorRef.current = null;
-    setDraggedTask(task);
+    setDraggedTask(pointerDown.task);
     setDropIndicator(null);
-    setDragPreview(preview);
+    setDragPreview({
+      task: pointerDown.task,
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: pointerDown.offsetX,
+      offsetY: pointerDown.offsetY,
+      width: pointerDown.width,
+    });
   }
 
   useEffect(() => {
     function handlePointerMove(event) {
+      const pointerDown = pointerDownRef.current;
       const task = draggedTaskRef.current;
 
+      if (!pointerDown) {
+        return;
+      }
+
       if (!task) {
+        if (!shouldStartDrag(pointerDown, event)) {
+          return;
+        }
+
+        startDrag(pointerDown, event);
         return;
       }
 
@@ -210,8 +239,14 @@ function App() {
     async function handlePointerUp() {
       const task = draggedTaskRef.current;
       const indicator = dropIndicatorRef.current;
+      const pointerDown = pointerDownRef.current;
 
       if (!task) {
+        if (pointerDown) {
+          clearDragState();
+          setSelectedTask(pointerDown.task);
+        }
+
         return;
       }
 
@@ -389,6 +424,14 @@ function App() {
           onCreated={loadBoard}
         />
       )}
+
+      <EditTaskModal
+        key={selectedTask?.id ?? "closed"}
+        task={selectedTask}
+        users={users}
+        onClose={() => setSelectedTask(null)}
+        onTaskUpdated={loadBoard}
+      />
     </div>
   );
 }
