@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import CreateTaskModal from "./components/CreateTaskModal";
+
+const API_BASE_URL = "http://localhost:8080";
 
 function TaskCardContent({ task }) {
   return (
@@ -24,6 +27,8 @@ function App() {
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
+  const [users, setUsers] = useState([]);
+  const [selectedColumn, setSelectedColumn] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
@@ -32,21 +37,30 @@ function App() {
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
 
-  async function loadBoard() {
+  const loadBoard = useCallback(async () => {
     try {
       const columnsResponse = await fetch(
-        `http://localhost:8080/api/columns/board/${boardId}`
+        `${API_BASE_URL}/api/columns/board/${boardId}`
       );
 
-      const columnData = await columnsResponse.json();
+      if (!columnsResponse.ok) {
+        throw new Error(`Columns request failed (${columnsResponse.status}).`);
+      }
 
+      const columnData = await columnsResponse.json();
       setColumns(columnData);
 
       const taskEntries = await Promise.all(
         columnData.map(async (column) => {
           const taskResponse = await fetch(
-            `http://localhost:8080/api/tasks/column/${column.id}`
+            `${API_BASE_URL}/api/tasks/column/${column.id}`
           );
+
+          if (!taskResponse.ok) {
+            throw new Error(
+              `Tasks request failed for column ${column.id} (${taskResponse.status}).`
+            );
+          }
 
           const tasks = await taskResponse.json();
 
@@ -56,14 +70,34 @@ function App() {
 
       setTasksByColumn(Object.fromEntries(taskEntries));
     } catch (error) {
-      console.error("Failed to load board:", error);
+      console.error("Failed to load Kanban board:", error);
     }
-  }
+  }, [boardId]);
 
   useEffect(() => {
-    // The initial fetch populates the board from the backend.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void loadBoard();
+    async function initializeBoard() {
+      await loadBoard();
+    }
+
+    initializeBoard();
+  }, [loadBoard]);
+
+  useEffect(() => {
+    async function loadUsers() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users`);
+
+        if (!response.ok) {
+          throw new Error(`Users request failed (${response.status}).`);
+        }
+
+        setUsers(await response.json());
+      } catch (error) {
+        console.error("Failed to load users:", error);
+      }
+    }
+
+    loadUsers();
   }, []);
 
   useEffect(() => {
@@ -188,8 +222,7 @@ function App() {
       }
 
       if (indicator.taskId === null) {
-        const targetTasks =
-          tasksByColumnRef.current[indicator.columnId] || [];
+        const targetTasks = tasksByColumnRef.current[indicator.columnId] || [];
 
         await moveTaskRef.current(
           task,
@@ -230,37 +263,48 @@ function App() {
     };
   }, []);
 
-  async function moveTask(task, targetColumnId, targetPosition) {
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/tasks/${task.id}/move`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            targetColumnId,
-            targetPosition,
-          }),
+  const moveTask = useCallback(
+    async (task, targetColumnId, targetPosition) => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/tasks/${task.id}/move`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              targetColumnId,
+              targetPosition,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to move task");
         }
-      );
 
-      if (!response.ok) {
-        throw new Error("Failed to move task");
+        setDraggedTask(null);
+        setDropIndicator(null);
+        await loadBoard();
+      } catch (error) {
+        console.error("Failed to move task:", error);
       }
-
-      setDraggedTask(null);
-      setDropIndicator(null);
-      await loadBoard();
-    } catch (error) {
-      console.error("Failed to move task:", error);
-    }
-  }
+    },
+    [loadBoard]
+  );
 
   useEffect(() => {
     moveTaskRef.current = moveTask;
-  });
+  }, [moveTask]);
+
+  function openCreateTaskModal(column) {
+    setSelectedColumn(column);
+  }
+
+  function closeCreateTaskModal() {
+    setSelectedColumn(null);
+  }
 
   return (
     <div className="app">
@@ -273,14 +317,20 @@ function App() {
             key={column.id}
             data-column-id={column.id}
           >
-            <h2>{column.name}</h2>
+            <div className="column-header">
+              <h2>{column.name}</h2>
+              <button
+                type="button"
+                className="add-task-button"
+                onClick={() => openCreateTaskModal(column)}
+              >
+                + Add Task
+              </button>
+            </div>
 
             <div className="task-list">
               {(tasksByColumn[column.id] || []).map((task) => (
-                <div
-                  key={task.id}
-                  className="task-wrapper"
-                >
+                <div key={task.id} className="task-wrapper">
                   {dropIndicator?.columnId === column.id &&
                     dropIndicator?.taskId === task.id &&
                     dropIndicator?.position === "before" && (
@@ -328,6 +378,16 @@ function App() {
             <TaskCardContent task={dragPreview.task} />
           </div>
         </div>
+      )}
+
+      {selectedColumn && (
+        <CreateTaskModal
+          isOpen
+          column={selectedColumn}
+          users={users}
+          onClose={closeCreateTaskModal}
+          onCreated={loadBoard}
+        />
       )}
     </div>
   );
