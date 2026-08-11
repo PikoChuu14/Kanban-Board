@@ -26,6 +26,7 @@
   color: #222;
   border: 1px solid #d0d0d0;
   border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 .kanban-column h2 {
@@ -46,6 +47,7 @@
   color: #222;
   border: 1px solid #ddd;
   border-radius: 8px;
+  cursor: grab;
 }
 
 .task-card h3 {
@@ -69,4 +71,9 @@
 
 .task-card small {
   color: #777;
+}
+
+.task-card:active {
+  cursor: grabbing;
+  opacity: 0.7;
 }
