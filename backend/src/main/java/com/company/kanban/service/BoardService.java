@@ -4,8 +4,11 @@ import com.company.kanban.dto.BoardResponse;
 import com.company.kanban.dto.CreateBoardRequest;
 import com.company.kanban.entity.Board;
 import com.company.kanban.entity.Department;
+import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.repository.BoardRepository;
 import com.company.kanban.repository.DepartmentRepository;
+import com.company.kanban.repository.KanbanColumnRepository;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,13 +20,16 @@ public class BoardService {
 
     private final BoardRepository boardRepository;
     private final DepartmentRepository departmentRepository;
+    private final KanbanColumnRepository kanbanColumnRepository;
 
     public BoardService(
             BoardRepository boardRepository,
-            DepartmentRepository departmentRepository) {
+            DepartmentRepository departmentRepository,
+            KanbanColumnRepository kanbanColumnRepository) {
 
         this.boardRepository = boardRepository;
         this.departmentRepository = departmentRepository;
+        this.kanbanColumnRepository = kanbanColumnRepository;
     }
 
     public List<BoardResponse> getAllBoards() {
@@ -89,6 +95,22 @@ public class BoardService {
 
         Board savedBoard =
                 boardRepository.save(board);
+
+        kanbanColumnRepository.save(
+                new KanbanColumn("To Do", 1, savedBoard)
+        );
+
+        kanbanColumnRepository.save(
+                new KanbanColumn("In Progress", 2, savedBoard)
+        );
+
+        kanbanColumnRepository.save(
+                new KanbanColumn("Review", 3, savedBoard)
+        );
+
+        kanbanColumnRepository.save(
+                new KanbanColumn("Done", 4, savedBoard)
+        );
 
         return toResponse(savedBoard);
     }
