@@ -26,6 +26,7 @@
   color: #222;
   border: 1px solid #d0d0d0;
   border-radius: 10px;
+  transition: background 0.2s ease;
 }
 
 .kanban-column h2 {
@@ -40,12 +41,56 @@
   gap: 12px;
 }
 
+.task-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.drop-indicator {
+  height: 4px;
+  margin: 5px 4px;
+  border-radius: 999px;
+  background: silver;
+  box-shadow:
+    0 0 4px rgba(192, 192, 192, 0.8),
+    0 0 8px rgba(192, 192, 192, 0.4);
+}
+
 .task-card {
+  box-sizing: border-box;
   padding: 14px;
   background: white;
   color: #222;
   border: 1px solid #ddd;
   border-radius: 8px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.task-card--dragging {
+  visibility: hidden;
+}
+
+.drag-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.drag-preview-card {
+  width: 100%;
+  cursor: grabbing;
+  transform: rotate(1deg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.task-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .task-card h3 {
@@ -69,4 +114,8 @@
 
 .task-card small {
   color: #777;
+}
+
+.task-card:active {
+  cursor: grabbing;
 }
