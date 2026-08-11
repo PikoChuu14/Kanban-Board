@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const API_BASE_URL = "http://localhost:8080";
 
-function EditTaskModal({ task, users, onClose, onTaskUpdated }) {
+function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete }) {
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
   const [priority, setPriority] = useState(task?.priority || "MEDIUM");
@@ -133,13 +133,27 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated }) {
             </p>
           )}
 
-          <div className="modal-actions">
-            <button type="button" className="cancel-button" onClick={onClose}>
-              Cancel
+          <div className="modal-actions modal-actions-split">
+            <button
+              type="button"
+              className="delete-button"
+              onClick={() => onDelete(task)}
+            >
+              Delete
             </button>
-            <button type="submit" className="create-button">
-              Save Changes
-            </button>
+
+            <div className="modal-actions-right">
+              <button
+                type="button"
+                className="cancel-button"
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="create-button">
+                Save Changes
+              </button>
+            </div>
           </div>
         </form>
       </div>

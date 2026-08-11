@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
+import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
 import EditTaskModal from "./components/EditTaskModal";
 
 const API_BASE_URL = "http://localhost:8080";
@@ -32,6 +33,8 @@ function App() {
   const [users, setUsers] = useState([]);
   const [selectedColumn, setSelectedColumn] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [deletingTask, setDeletingTask] = useState(false);
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
@@ -341,6 +344,37 @@ function App() {
     setSelectedColumn(null);
   }
 
+  function requestDeleteTask(task) {
+    setSelectedTask(null);
+    setTaskToDelete(task);
+  }
+
+  async function confirmDeleteTask() {
+    if (!taskToDelete) {
+      return;
+    }
+
+    setDeletingTask(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskToDelete.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete task");
+      }
+
+      setTaskToDelete(null);
+
+      await loadBoard();
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+    } finally {
+      setDeletingTask(false);
+    }
+  }
+
   return (
     <div className="app">
       <h1>PPC Workflow Board</h1>
@@ -431,6 +465,14 @@ function App() {
         users={users}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={loadBoard}
+        onDelete={requestDeleteTask}
+      />
+
+      <ConfirmDeleteModal
+        task={taskToDelete}
+        deleting={deletingTask}
+        onCancel={() => setTaskToDelete(null)}
+        onConfirm={confirmDeleteTask}
       />
     </div>
   );

@@ -52,4 +52,12 @@ public class TaskController {
 
         return taskService.updateTask(taskId, request);
     }
+
+    @DeleteMapping("/{taskId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteTask(
+            @PathVariable Long taskId) {
+
+        taskService.deleteTask(taskId);
+    }
 }
