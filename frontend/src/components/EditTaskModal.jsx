@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../api/apiFetch";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -21,11 +22,8 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete }) {
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/tasks/${task.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           title,
           description,

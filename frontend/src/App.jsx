@@ -3,6 +3,9 @@ import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
 import EditTaskModal from "./components/EditTaskModal";
+import LoginPage from "./components/LoginPage";
+import { apiFetch } from "./api/apiFetch";
+import { useAuth } from "./context/AuthContext";
 
 const API_BASE_URL = "http://localhost:8080";
 const DRAG_START_THRESHOLD = 6;
@@ -26,6 +29,7 @@ function TaskCardContent({ task }) {
 }
 
 function App() {
+  const { user, logout, isAuthenticated } = useAuth();
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -49,7 +53,7 @@ function App() {
 
   const loadBoard = useCallback(async (boardId) => {
     try {
-      const columnsResponse = await fetch(
+      const columnsResponse = await apiFetch(
         `${API_BASE_URL}/api/columns/board/${boardId}`
       );
 
@@ -62,7 +66,7 @@ function App() {
 
       const taskEntries = await Promise.all(
         columnData.map(async (column) => {
-          const taskResponse = await fetch(
+          const taskResponse = await apiFetch(
             `${API_BASE_URL}/api/tasks/column/${column.id}`
           );
 
@@ -85,9 +89,13 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     async function loadDepartments() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/departments`);
+        const response = await apiFetch(`${API_BASE_URL}/api/departments`);
 
         if (!response.ok) {
           throw new Error(`Departments request failed (${response.status}).`);
@@ -106,7 +114,7 @@ function App() {
     }
 
     loadDepartments();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (selectedDepartmentId === null) {
@@ -115,7 +123,7 @@ function App() {
 
     async function loadBoards() {
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `${API_BASE_URL}/api/boards/department/${selectedDepartmentId}`
         );
 
@@ -153,9 +161,13 @@ function App() {
   }, [selectedBoardId, loadBoard]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     async function loadUsers() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/users`);
+        const response = await apiFetch(`${API_BASE_URL}/api/users`);
 
         if (!response.ok) {
           throw new Error(`Users request failed (${response.status}).`);
@@ -168,7 +180,7 @@ function App() {
     }
 
     loadUsers();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     tasksByColumnRef.current = tasksByColumn;
@@ -367,11 +379,8 @@ function App() {
   const moveTask = useCallback(
     async (task, targetColumnId, targetPosition) => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}/move`, {
+        const response = await apiFetch(`${API_BASE_URL}/api/tasks/${task.id}/move`, {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify({
             targetColumnId,
             targetPosition,
@@ -419,7 +428,7 @@ function App() {
     setDeletingTask(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskToDelete.id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/tasks/${taskToDelete.id}`, {
         method: "DELETE",
       });
 
@@ -439,8 +448,28 @@ function App() {
     }
   }
 
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="app">
+      <div className="user-toolbar">
+        <div>
+          <strong>{user?.name}</strong>
+
+          <span>
+            {user?.departmentName}
+            {" \u00b7 "}
+            {user?.role}
+          </span>
+        </div>
+
+        <button type="button" onClick={logout}>
+          Logout
+        </button>
+      </div>
+
       <h1>
         {boards.find((board) => board.id === selectedBoardId)?.name ||
           "Company Kanban"}

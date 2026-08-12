@@ -399,3 +399,72 @@
     gap: 8px;
   }
 }
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #111318;
+}
+
+.login-card {
+  width: min(400px, 100%);
+  padding: 28px;
+  border-radius: 12px;
+  background: white;
+  color: #222;
+}
+
+.login-card h1 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.login-card input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-error {
+  margin-bottom: 16px;
+  color: #c62828;
+}
+
+.user-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.user-toolbar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-toolbar span {
+  font-size: 13px;
+  color: #aaa;
+}

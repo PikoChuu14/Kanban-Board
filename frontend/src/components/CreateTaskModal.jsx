@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiFetch } from "../api/apiFetch";
 
 const API_BASE_URL = "http://localhost:8080";
 
@@ -43,11 +44,8 @@ function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/tasks`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           title,
           description: formData.description.trim() || null,
