@@ -1,5 +1,6 @@
 package com.company.kanban.config;
 
+import com.company.kanban.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -7,11 +8,21 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
+        this.jwtAuthenticationFilter =
+                jwtAuthenticationFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -41,13 +52,6 @@ public class SecurityConfig {
                                                 .matcher("/api/auth/**")
                                 ).permitAll()
 
-                                // Temporary while building JWT
-                                .requestMatchers(
-                                        PathPatternRequestMatcher
-                                                .withDefaults()
-                                                .matcher("/api/**")
-                                ).permitAll()
-
                                 .requestMatchers(
                                         PathPatternRequestMatcher
                                                 .withDefaults()
@@ -55,6 +59,11 @@ public class SecurityConfig {
                                 ).permitAll()
 
                                 .anyRequest().authenticated()
+                )
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
 
         return http.build();

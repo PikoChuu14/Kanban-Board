@@ -1,6 +1,7 @@
 package com.company.kanban.service;
 
 import com.company.kanban.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,5 +41,30 @@ public class JwtService {
                 .expiration(expiration)
                 .signWith(key)
                 .compact();
+    }
+
+    public Claims extractClaims(String token) {
+
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public String extractEmail(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            Claims claims = extractClaims(token);
+
+            return claims.getExpiration()
+                    .after(new Date());
+
+        } catch (Exception exception) {
+            return false;
+        }
     }
 }
