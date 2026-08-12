@@ -26,6 +26,8 @@ function TaskCardContent({ task }) {
 }
 
 function App() {
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
 
@@ -83,9 +85,39 @@ function App() {
   }, []);
 
   useEffect(() => {
+    async function loadDepartments() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/departments`);
+
+        if (!response.ok) {
+          throw new Error(`Departments request failed (${response.status}).`);
+        }
+
+        const data = await response.json();
+
+        setDepartments(data);
+
+        if (data.length > 0) {
+          setSelectedDepartmentId(data[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load departments:", error);
+      }
+    }
+
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
+    if (selectedDepartmentId === null) {
+      return;
+    }
+
     async function loadBoards() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/boards`);
+        const response = await fetch(
+          `${API_BASE_URL}/api/boards/department/${selectedDepartmentId}`
+        );
 
         if (!response.ok) {
           throw new Error(`Boards request failed (${response.status}).`);
@@ -97,6 +129,10 @@ function App() {
 
         if (data.length > 0) {
           setSelectedBoardId(data[0].id);
+        } else {
+          setSelectedBoardId(null);
+          setColumns([]);
+          setTasksByColumn({});
         }
       } catch (error) {
         console.error("Failed to load boards:", error);
@@ -104,7 +140,7 @@ function App() {
     }
 
     loadBoards();
-  }, []);
+  }, [selectedDepartmentId]);
 
   useEffect(() => {
     if (selectedBoardId !== null) {
@@ -331,19 +367,16 @@ function App() {
   const moveTask = useCallback(
     async (task, targetColumnId, targetPosition) => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/tasks/${task.id}/move`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              targetColumnId,
-              targetPosition,
-            }),
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/api/tasks/${task.id}/move`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            targetColumnId,
+            targetPosition,
+          }),
+        });
 
         if (!response.ok) {
           throw new Error("Failed to move task");
@@ -414,77 +447,106 @@ function App() {
       </h1>
 
       <div className="board-toolbar">
-        <label htmlFor="board-select">Board:</label>
+        <div className="toolbar-field">
+          <label htmlFor="department-select">Department</label>
 
-        <select
-          id="board-select"
-          value={selectedBoardId ?? ""}
-          onChange={(event) =>
-            setSelectedBoardId(Number(event.target.value))
-          }
-        >
-          {boards.map((board) => (
-            <option key={board.id} value={board.id}>
-              {board.name} — {board.departmentName}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="kanban-board">
-        {columns.map((column) => (
-          <div
-            className="kanban-column"
-            key={column.id}
-            data-column-id={column.id}
+          <select
+            id="department-select"
+            value={selectedDepartmentId ?? ""}
+            onChange={(event) =>
+              setSelectedDepartmentId(Number(event.target.value))
+            }
           >
-            <div className="column-header">
-              <h2>{column.name}</h2>
-              <button
-                type="button"
-                className="add-task-button"
-                onClick={() => openCreateTaskModal(column)}
-              >
-                + Add Task
-              </button>
-            </div>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <div className="task-list">
-              {(tasksByColumn[column.id] || []).map((task) => (
-                <div key={task.id} className="task-wrapper">
-                  {dropIndicator?.columnId === column.id &&
-                    dropIndicator?.taskId === task.id &&
-                    dropIndicator?.position === "before" && (
-                      <div className="drop-indicator" />
-                    )}
+        <div className="toolbar-field">
+          <label htmlFor="board-select">Board</label>
 
-                  <div
-                    className={`task-card ${
-                      draggedTask?.id === task.id ? "task-card--dragging" : ""
-                    }`}
-                    data-column-id={column.id}
-                    data-task-id={task.id}
-                    onPointerDown={(event) => handlePointerDown(event, task)}
-                  >
-                    <TaskCardContent task={task} />
-                  </div>
-
-                  {dropIndicator?.columnId === column.id &&
-                    dropIndicator?.taskId === task.id &&
-                    dropIndicator?.position === "after" && (
-                      <div className="drop-indicator" />
-                    )}
-                </div>
-              ))}
-
-              {dropIndicator?.columnId === column.id &&
-                dropIndicator?.taskId === null && (
-                  <div className="drop-indicator" />
-                )}
-            </div>
-          </div>
-        ))}
+          <select
+            id="board-select"
+            value={selectedBoardId ?? ""}
+            onChange={(event) =>
+              setSelectedBoardId(Number(event.target.value))
+            }
+            disabled={boards.length === 0}
+          >
+            {boards.map((board) => (
+              <option key={board.id} value={board.id}>
+                {board.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
+
+      {selectedDepartmentId !== null && boards.length === 0 && (
+        <div className="empty-state">
+          <p>No boards found for this department.</p>
+        </div>
+      )}
+
+      {selectedBoardId !== null && (
+        <div className="kanban-board">
+          {columns.map((column) => (
+            <div
+              className="kanban-column"
+              key={column.id}
+              data-column-id={column.id}
+            >
+              <div className="column-header">
+                <h2>{column.name}</h2>
+                <button
+                  type="button"
+                  className="add-task-button"
+                  onClick={() => openCreateTaskModal(column)}
+                >
+                  + Add Task
+                </button>
+              </div>
+
+              <div className="task-list">
+                {(tasksByColumn[column.id] || []).map((task) => (
+                  <div key={task.id} className="task-wrapper">
+                    {dropIndicator?.columnId === column.id &&
+                      dropIndicator?.taskId === task.id &&
+                      dropIndicator?.position === "before" && (
+                        <div className="drop-indicator" />
+                      )}
+
+                    <div
+                      className={`task-card ${
+                        draggedTask?.id === task.id ? "task-card--dragging" : ""
+                      }`}
+                      data-column-id={column.id}
+                      data-task-id={task.id}
+                      onPointerDown={(event) => handlePointerDown(event, task)}
+                    >
+                      <TaskCardContent task={task} />
+                    </div>
+
+                    {dropIndicator?.columnId === column.id &&
+                      dropIndicator?.taskId === task.id &&
+                      dropIndicator?.position === "after" && (
+                        <div className="drop-indicator" />
+                      )}
+                  </div>
+                ))}
+
+                {dropIndicator?.columnId === column.id &&
+                  dropIndicator?.taskId === null && (
+                    <div className="drop-indicator" />
+                  )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {dragPreview && (
         <div
