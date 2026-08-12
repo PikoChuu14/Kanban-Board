@@ -29,7 +29,9 @@ function TaskCardContent({ task }) {
 }
 
 function App() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, loading, isAuthenticated } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const canDeleteTasks = isAdmin || user?.role === "MANAGER";
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -45,6 +47,7 @@ function App() {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
+  const [permissionMessage, setPermissionMessage] = useState("");
   const draggedTaskRef = useRef(null);
   const dropIndicatorRef = useRef(null);
   const pointerDownRef = useRef(null);
@@ -58,6 +61,9 @@ function App() {
       );
 
       if (!columnsResponse.ok) {
+        if (columnsResponse.status === 403) {
+          setPermissionMessage("You do not have permission to access this department.");
+        }
         throw new Error(`Columns request failed (${columnsResponse.status}).`);
       }
 
@@ -106,7 +112,7 @@ function App() {
         setDepartments(data);
 
         if (data.length > 0) {
-          setSelectedDepartmentId(data[0].id);
+          setSelectedDepartmentId(isAdmin ? data[0].id : user.departmentId);
         }
       } catch (error) {
         console.error("Failed to load departments:", error);
@@ -114,7 +120,7 @@ function App() {
     }
 
     loadDepartments();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isAdmin, user]);
 
   useEffect(() => {
     if (selectedDepartmentId === null) {
@@ -128,6 +134,9 @@ function App() {
         );
 
         if (!response.ok) {
+          if (response.status === 403) {
+            setPermissionMessage("You do not have permission to access this department.");
+          }
           throw new Error(`Boards request failed (${response.status}).`);
         }
 
@@ -179,8 +188,10 @@ function App() {
       }
     }
 
-    loadUsers();
-  }, [isAuthenticated]);
+    if (isAdmin) {
+      loadUsers();
+    }
+  }, [isAuthenticated, isAdmin]);
 
   useEffect(() => {
     tasksByColumnRef.current = tasksByColumn;
@@ -388,6 +399,9 @@ function App() {
         });
 
         if (!response.ok) {
+          if (response.status === 403) {
+            setPermissionMessage("You do not have permission to perform this action.");
+          }
           throw new Error("Failed to move task");
         }
 
@@ -433,6 +447,9 @@ function App() {
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to delete this task.");
+        }
         throw new Error("Failed to delete task");
       }
 
@@ -446,6 +463,10 @@ function App() {
     } finally {
       setDeletingTask(false);
     }
+  }
+
+  if (loading) {
+    return <div className="app-loading">Loading...</div>;
   }
 
   if (!isAuthenticated) {
@@ -470,6 +491,13 @@ function App() {
         </button>
       </div>
 
+      {permissionMessage && (
+        <div className="permission-message" role="alert">
+          {permissionMessage}
+          <button type="button" onClick={() => setPermissionMessage("")}>Dismiss</button>
+        </div>
+      )}
+
       <h1>
         {boards.find((board) => board.id === selectedBoardId)?.name ||
           "Company Kanban"}
@@ -482,6 +510,7 @@ function App() {
           <select
             id="department-select"
             value={selectedDepartmentId ?? ""}
+            disabled={!isAdmin}
             onChange={(event) =>
               setSelectedDepartmentId(Number(event.target.value))
             }
@@ -613,6 +642,7 @@ function App() {
           selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
         }
         onDelete={requestDeleteTask}
+        canDelete={canDeleteTasks}
       />
 
       <ConfirmDeleteModal

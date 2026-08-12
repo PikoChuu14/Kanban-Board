@@ -1,15 +1,48 @@
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+import { apiFetch } from "../api/apiFetch";
 
 const AuthContext = createContext(null);
+const API_BASE_URL = "http://localhost:8080";
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
+  useEffect(() => {
+    async function restoreSession() {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+      try {
+        const response = await apiFetch(`${API_BASE_URL}/api/auth/me`);
+
+        if (!response.ok) {
+          throw new Error("Invalid session");
+        }
+
+        setUser(await response.json());
+      } catch (error) {
+        console.error("Failed to restore session:", error);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    restoreSession();
+  }, [token]);
 
   function login(loginResponse) {
     const loggedInUser = {
@@ -22,8 +55,9 @@ export function AuthProvider({ children }) {
     };
 
     localStorage.setItem("token", loginResponse.token);
-    localStorage.setItem("user", JSON.stringify(loggedInUser));
+    localStorage.removeItem("user");
 
+    setLoading(true);
     setToken(loginResponse.token);
     setUser(loggedInUser);
   }
@@ -43,7 +77,8 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
-        isAuthenticated: Boolean(token),
+        loading,
+        isAuthenticated: Boolean(token && user),
       }}
     >
       {children}

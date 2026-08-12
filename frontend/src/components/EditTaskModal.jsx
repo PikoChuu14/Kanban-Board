@@ -3,7 +3,7 @@ import { apiFetch } from "../api/apiFetch";
 
 const API_BASE_URL = "http://localhost:8080";
 
-function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete }) {
+function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelete }) {
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
   const [priority, setPriority] = useState(task?.priority || "MEDIUM");
@@ -34,7 +34,9 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete }) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update task");
+        throw new Error(response.status === 403
+          ? "You do not have permission to perform this action."
+          : "Unable to update task.");
       }
 
       onTaskUpdated();
@@ -132,13 +134,15 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete }) {
           )}
 
           <div className="modal-actions modal-actions-split">
-            <button
-              type="button"
-              className="delete-button"
-              onClick={() => onDelete(task)}
-            >
-              Delete
-            </button>
+            {canDelete && (
+              <button
+                type="button"
+                className="delete-button"
+                onClick={() => onDelete(task)}
+              >
+                Delete
+              </button>
+            )}
 
             <div className="modal-actions-right">
               <button

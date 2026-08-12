@@ -2,7 +2,9 @@ package com.company.kanban.controller;
 
 import com.company.kanban.dto.KanbanColumnResponse;
 import com.company.kanban.service.KanbanColumnService;
+import com.company.kanban.entity.User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -20,8 +22,9 @@ public class KanbanColumnController {
 
     @GetMapping("/board/{boardId}")
     public List<KanbanColumnResponse> getColumnsByBoard(
-            @PathVariable Long boardId) {
+            @PathVariable Long boardId,
+            @AuthenticationPrincipal User currentUser) {
 
-        return kanbanColumnService.getColumnsByBoard(boardId);
+        return kanbanColumnService.getColumnsByBoard(boardId, currentUser);
     }
 }

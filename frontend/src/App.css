@@ -468,3 +468,25 @@
   font-size: 13px;
   color: #aaa;
 }
+
+.permission-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #8b2f35;
+  border-radius: 8px;
+  background: #3a1d22;
+  color: #ffd9dc;
+}
+
+.permission-message button {
+  border: 1px solid #d58489;
+  border-radius: 5px;
+  padding: 5px 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
