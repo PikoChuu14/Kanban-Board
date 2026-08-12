@@ -26,7 +26,8 @@ function TaskCardContent({ task }) {
 }
 
 function App() {
-  const boardId = 2;
+  const [boards, setBoards] = useState([]);
+  const [selectedBoardId, setSelectedBoardId] = useState(null);
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
@@ -44,7 +45,7 @@ function App() {
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
 
-  const loadBoard = useCallback(async () => {
+  const loadBoard = useCallback(async (boardId) => {
     try {
       const columnsResponse = await fetch(
         `${API_BASE_URL}/api/columns/board/${boardId}`
@@ -77,17 +78,43 @@ function App() {
 
       setTasksByColumn(Object.fromEntries(taskEntries));
     } catch (error) {
-      console.error("Failed to load Kanban board:", error);
+      console.error("Failed to load board:", error);
     }
-  }, [boardId]);
+  }, []);
 
   useEffect(() => {
-    async function initializeBoard() {
-      await loadBoard();
+    async function loadBoards() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/boards`);
+
+        if (!response.ok) {
+          throw new Error(`Boards request failed (${response.status}).`);
+        }
+
+        const data = await response.json();
+
+        setBoards(data);
+
+        if (data.length > 0) {
+          setSelectedBoardId(data[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load boards:", error);
+      }
     }
 
-    initializeBoard();
-  }, [loadBoard]);
+    loadBoards();
+  }, []);
+
+  useEffect(() => {
+    if (selectedBoardId !== null) {
+      loadBoard(selectedBoardId);
+      return;
+    }
+
+    setColumns([]);
+    setTasksByColumn({});
+  }, [selectedBoardId, loadBoard]);
 
   useEffect(() => {
     async function loadUsers() {
@@ -324,12 +351,14 @@ function App() {
 
         setDraggedTask(null);
         setDropIndicator(null);
-        await loadBoard();
+        if (selectedBoardId !== null) {
+          await loadBoard(selectedBoardId);
+        }
       } catch (error) {
         console.error("Failed to move task:", error);
       }
     },
-    [loadBoard]
+    [loadBoard, selectedBoardId]
   );
 
   useEffect(() => {
@@ -367,7 +396,9 @@ function App() {
 
       setTaskToDelete(null);
 
-      await loadBoard();
+      if (selectedBoardId !== null) {
+        await loadBoard(selectedBoardId);
+      }
     } catch (error) {
       console.error("Failed to delete task:", error);
     } finally {
@@ -377,7 +408,28 @@ function App() {
 
   return (
     <div className="app">
-      <h1>PPC Workflow Board</h1>
+      <h1>
+        {boards.find((board) => board.id === selectedBoardId)?.name ||
+          "Company Kanban"}
+      </h1>
+
+      <div className="board-toolbar">
+        <label htmlFor="board-select">Board:</label>
+
+        <select
+          id="board-select"
+          value={selectedBoardId ?? ""}
+          onChange={(event) =>
+            setSelectedBoardId(Number(event.target.value))
+          }
+        >
+          {boards.map((board) => (
+            <option key={board.id} value={board.id}>
+              {board.name} — {board.departmentName}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="kanban-board">
         {columns.map((column) => (
@@ -455,7 +507,9 @@ function App() {
           column={selectedColumn}
           users={users}
           onClose={closeCreateTaskModal}
-          onCreated={loadBoard}
+          onCreated={() =>
+            selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
+          }
         />
       )}
 
@@ -464,7 +518,9 @@ function App() {
         task={selectedTask}
         users={users}
         onClose={() => setSelectedTask(null)}
-        onTaskUpdated={loadBoard}
+        onTaskUpdated={() =>
+          selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
+        }
         onDelete={requestDeleteTask}
       />
 
