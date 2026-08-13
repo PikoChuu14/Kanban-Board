@@ -10,6 +10,7 @@ import com.company.kanban.entity.User;
 import com.company.kanban.repository.BoardRepository;
 import com.company.kanban.repository.DepartmentRepository;
 import com.company.kanban.repository.KanbanColumnRepository;
+import com.company.kanban.repository.TaskRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,17 +25,20 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final DepartmentRepository departmentRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
+    private final TaskRepository taskRepository;
     private final AuthorizationService authorizationService;
 
     public BoardService(
             BoardRepository boardRepository,
             DepartmentRepository departmentRepository,
             KanbanColumnRepository kanbanColumnRepository,
+            TaskRepository taskRepository,
             AuthorizationService authorizationService) {
 
         this.boardRepository = boardRepository;
         this.departmentRepository = departmentRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
+        this.taskRepository = taskRepository;
         this.authorizationService = authorizationService;
     }
 
@@ -162,6 +166,34 @@ public class BoardService {
         board.setDescription(request.description());
 
         return toResponse(board);
+    }
+
+    @Transactional
+    public void deleteBoard(Long boardId, User currentUser) {
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Board not found"
+                ));
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                board.getDepartment().getId()
+        );
+
+        if (taskRepository.existsByColumnBoardId(boardId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Cannot delete board because it still contains tasks"
+            );
+        }
+
+        // Columns are not configured with cascade delete. Remove the empty
+        // columns first so deleting the board cannot leave orphaned rows or
+        // fail on the foreign-key constraint.
+        kanbanColumnRepository.deleteByBoardId(boardId);
+        boardRepository.delete(board);
     }
 
     private BoardResponse toResponse(Board board) {

@@ -62,4 +62,13 @@ public class BoardController {
 
         return boardService.updateBoard(id, request, currentUser);
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteBoard(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+
+        boardService.deleteBoard(id, currentUser);
+    }
 }

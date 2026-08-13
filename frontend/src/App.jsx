@@ -3,6 +3,7 @@ import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
 import CreateBoardModal from "./components/CreateBoardModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
+import ConfirmDeleteBoardModal from "./components/ConfirmDeleteBoardModal";
 import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
@@ -42,6 +43,9 @@ function App() {
   const [selectedBoardId, setSelectedBoardId] = useState(null);
   const [showCreateBoard, setShowCreateBoard] = useState(false);
   const [boardToEdit, setBoardToEdit] = useState(null);
+  const [boardToDelete, setBoardToDelete] = useState(null);
+  const [deletingBoard, setDeletingBoard] = useState(false);
+  const [deleteBoardError, setDeleteBoardError] = useState("");
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
@@ -459,6 +463,61 @@ function App() {
     await loadBoards(updatedBoard.departmentId, updatedBoard.id);
   }
 
+  function requestDeleteBoard(board) {
+    setDeleteBoardError("");
+    setBoardToDelete(board);
+  }
+
+  function cancelDeleteBoard() {
+    setBoardToDelete(null);
+    setDeleteBoardError("");
+  }
+
+  async function confirmDeleteBoard() {
+    if (!boardToDelete) {
+      return;
+    }
+
+    setDeletingBoard(true);
+    setDeleteBoardError("");
+
+    try {
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/boards/${boardToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          const data = await response.json().catch(() => null);
+          setDeleteBoardError(
+            data?.message || "Cannot delete board because it still contains tasks"
+          );
+          return;
+        }
+
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to delete this board.");
+        }
+
+        throw new Error(`Failed to delete board (${response.status}).`);
+      }
+
+      const departmentId = boardToDelete.departmentId;
+      setBoardToDelete(null);
+      await loadBoards(departmentId);
+    } catch (error) {
+      if (boardToDelete) {
+        setDeleteBoardError("Unable to delete the board. Please try again.");
+      }
+      console.error("Failed to delete board:", error);
+    } finally {
+      setDeletingBoard(false);
+    }
+  }
+
   function requestDeleteTask(task) {
     setSelectedTask(null);
     setTaskToDelete(task);
@@ -594,6 +653,18 @@ function App() {
             <button
               type="button"
               className="create-board-button"
+              onClick={() =>
+                requestDeleteBoard(
+                  boards.find((board) => board.id === selectedBoardId) ?? null
+                )
+              }
+              disabled={selectedBoardId === null}
+            >
+              Delete Board
+            </button>
+            <button
+              type="button"
+              className="create-board-button"
               onClick={() => setShowCreateBoard(true)}
             >
               + Create Board
@@ -724,6 +795,14 @@ function App() {
         deleting={deletingTask}
         onCancel={() => setTaskToDelete(null)}
         onConfirm={confirmDeleteTask}
+      />
+
+      <ConfirmDeleteBoardModal
+        board={boardToDelete}
+        deleting={deletingBoard}
+        error={deleteBoardError}
+        onCancel={cancelDeleteBoard}
+        onConfirm={confirmDeleteBoard}
       />
     </div>
   );

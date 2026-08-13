@@ -9,4 +9,6 @@ public interface KanbanColumnRepository
         extends JpaRepository<KanbanColumn, Long> {
 
     List<KanbanColumn> findByBoardIdOrderByPositionAsc(Long boardId);
+
+    void deleteByBoardId(Long boardId);
 }

@@ -16,4 +16,6 @@ public interface TaskRepository
     );
 
     int countByColumnId(Long columnId);
+
+    boolean existsByColumnBoardId(Long boardId);
 }

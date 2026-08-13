@@ -1,6 +1,5 @@
 package com.company.kanban.service;
 
-import com.company.kanban.dto.UpdateBoardRequest;
 import com.company.kanban.entity.Board;
 import com.company.kanban.entity.Department;
 import com.company.kanban.entity.Role;
@@ -18,79 +17,90 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class BoardServiceUpdateTest {
+class BoardServiceDeleteTest {
 
     private final BoardRepository boardRepository = mock(BoardRepository.class);
+    private final KanbanColumnRepository kanbanColumnRepository = mock(KanbanColumnRepository.class);
+    private final TaskRepository taskRepository = mock(TaskRepository.class);
     private final BoardService boardService = new BoardService(
             boardRepository,
             mock(DepartmentRepository.class),
-            mock(KanbanColumnRepository.class),
-            mock(TaskRepository.class),
+            kanbanColumnRepository,
+            taskRepository,
             new AuthorizationService()
     );
 
     @Test
-    void adminCanUpdateAnyBoard() {
+    void adminDeletesEmptyBoard() {
         Board board = boardInDepartment(10L);
-        User admin = user(Role.ADMIN, null);
         when(boardRepository.findById(1L)).thenReturn(Optional.of(board));
+        when(taskRepository.existsByColumnBoardId(1L)).thenReturn(false);
 
-        assertDoesNotThrow(() -> boardService.updateBoard(
-                1L, new UpdateBoardRequest("Updated QC", "Updated description"), admin));
+        assertDoesNotThrow(() -> boardService.deleteBoard(1L, user(Role.ADMIN, null)));
 
-        verify(board).setName("Updated QC");
-        verify(board).setDescription("Updated description");
+        verify(kanbanColumnRepository).deleteByBoardId(1L);
+        verify(boardRepository).delete(board);
     }
 
     @Test
-    void managerCanUpdateBoardInOwnDepartment() {
+    void managerDeletesEmptyBoardInOwnDepartment() {
         Board board = boardInDepartment(10L);
-        User manager = user(Role.MANAGER, 10L);
         when(boardRepository.findById(1L)).thenReturn(Optional.of(board));
+        when(taskRepository.existsByColumnBoardId(1L)).thenReturn(false);
 
-        assertDoesNotThrow(() -> boardService.updateBoard(
-                1L, new UpdateBoardRequest("Updated QC", "Updated description"), manager));
+        assertDoesNotThrow(() -> boardService.deleteBoard(1L, user(Role.MANAGER, 10L)));
 
-        verify(board).setName("Updated QC");
+        verify(kanbanColumnRepository).deleteByBoardId(1L);
+        verify(boardRepository).delete(board);
     }
 
     @Test
-    void managerCannotUpdateBoardInAnotherDepartment() {
+    void managerCannotDeleteBoardInAnotherDepartment() {
         Board board = boardInDepartment(10L);
-        User manager = user(Role.MANAGER, 20L);
         when(boardRepository.findById(1L)).thenReturn(Optional.of(board));
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> boardService.updateBoard(
-                        1L, new UpdateBoardRequest("Updated QC", "Updated description"), manager)
+                () -> boardService.deleteBoard(1L, user(Role.MANAGER, 20L))
         );
 
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
-        verify(board, never()).setName(any());
+        verify(boardRepository, never()).delete(board);
     }
 
     @Test
-    void staffCannotUpdateAnyBoard() {
+    void staffCannotDeleteAnyBoard() {
         Board board = boardInDepartment(10L);
-        User staff = user(Role.STAFF, 10L);
         when(boardRepository.findById(1L)).thenReturn(Optional.of(board));
 
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,
-                () -> boardService.updateBoard(
-                        1L, new UpdateBoardRequest("Updated QC", "Updated description"), staff)
+                () -> boardService.deleteBoard(1L, user(Role.STAFF, 10L))
         );
 
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
-        verify(board, never()).setName(any());
+        verify(boardRepository, never()).delete(board);
+    }
+
+    @Test
+    void cannotDeleteBoardContainingTasks() {
+        Board board = boardInDepartment(10L);
+        when(boardRepository.findById(1L)).thenReturn(Optional.of(board));
+        when(taskRepository.existsByColumnBoardId(1L)).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> boardService.deleteBoard(1L, user(Role.ADMIN, null))
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        verify(kanbanColumnRepository, never()).deleteByBoardId(1L);
+        verify(boardRepository, never()).delete(board);
     }
 
     private Board boardInDepartment(Long departmentId) {
@@ -98,9 +108,6 @@ class BoardServiceUpdateTest {
         Department department = mock(Department.class);
         when(department.getId()).thenReturn(departmentId);
         when(board.getDepartment()).thenReturn(department);
-        when(board.getName()).thenReturn("QC Board");
-        when(boardRepository.existsByNameIgnoreCaseAndDepartmentId(any(), anyLong()))
-                .thenReturn(false);
         return board;
     }
 
