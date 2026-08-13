@@ -40,6 +40,22 @@
   font-size: 14px;
 }
 
+.create-board-button {
+  align-self: end;
+  padding: 9px 12px;
+  border: 1px solid #2456a6;
+  border-radius: 6px;
+  background: #2456a6;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.create-board-button:hover {
+  background: #1d4689;
+}
+
 .department-display {
   display: flex;
   align-items: center;

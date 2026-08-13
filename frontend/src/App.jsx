@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
+import CreateBoardModal from "./components/CreateBoardModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
@@ -32,11 +33,13 @@ function App() {
   const { user, logout, loading, isAuthenticated } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const isManager = user?.role === "MANAGER";
+  const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
+  const [showCreateBoard, setShowCreateBoard] = useState(false);
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
@@ -134,42 +137,40 @@ function App() {
     }
   }, [user, isAdmin]);
 
-  useEffect(() => {
-    if (selectedDepartmentId === null) {
-      return;
-    }
+  const loadBoards = useCallback(async (departmentId) => {
+    try {
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/boards/department/${departmentId}`
+      );
 
-    async function loadBoards() {
-      try {
-        const response = await apiFetch(
-          `${API_BASE_URL}/api/boards/department/${selectedDepartmentId}`
-        );
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            setPermissionMessage("You do not have permission to access this department.");
-          }
-          throw new Error(`Boards request failed (${response.status}).`);
+      if (!response.ok) {
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to access this department.");
         }
-
-        const data = await response.json();
-
-        setBoards(data);
-
-        if (data.length > 0) {
-          setSelectedBoardId(data[0].id);
-        } else {
-          setSelectedBoardId(null);
-          setColumns([]);
-          setTasksByColumn({});
-        }
-      } catch (error) {
-        console.error("Failed to load boards:", error);
+        throw new Error(`Boards request failed (${response.status}).`);
       }
-    }
 
-    loadBoards();
-  }, [selectedDepartmentId]);
+      const data = await response.json();
+
+      setBoards(data);
+
+      if (data.length > 0) {
+        setSelectedBoardId(data[0].id);
+      } else {
+        setSelectedBoardId(null);
+        setColumns([]);
+        setTasksByColumn({});
+      }
+    } catch (error) {
+      console.error("Failed to load boards:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedDepartmentId !== null) {
+      loadBoards(selectedDepartmentId);
+    }
+  }, [selectedDepartmentId, loadBoards]);
 
   useEffect(() => {
     if (selectedBoardId !== null) {
@@ -442,6 +443,12 @@ function App() {
     setSelectedColumn(null);
   }
 
+  async function handleBoardCreated(createdBoard) {
+    setSelectedDepartmentId(createdBoard.departmentId);
+    await loadBoards(createdBoard.departmentId);
+    setSelectedBoardId(createdBoard.id);
+  }
+
   function requestDeleteTask(task) {
     setSelectedTask(null);
     setTaskToDelete(task);
@@ -561,6 +568,16 @@ function App() {
             ))}
           </select>
         </div>
+
+        {canManageBoards && (
+          <button
+            type="button"
+            className="create-board-button"
+            onClick={() => setShowCreateBoard(true)}
+          >
+            + Create Board
+          </button>
+        )}
       </div>
 
       {selectedDepartmentId !== null && boards.length === 0 && (
@@ -652,6 +669,14 @@ function App() {
           }
         />
       )}
+
+      <CreateBoardModal
+        isOpen={showCreateBoard}
+        user={user}
+        departments={departments}
+        onClose={() => setShowCreateBoard(false)}
+        onCreated={handleBoardCreated}
+      />
 
       <EditTaskModal
         key={selectedTask?.id ?? "closed"}

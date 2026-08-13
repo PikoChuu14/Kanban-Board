@@ -12,6 +12,7 @@ import com.company.kanban.repository.KanbanColumnRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -73,13 +74,9 @@ public class BoardService {
                 .toList();
     }
 
-    public BoardResponse createBoard(
+        @Transactional
+        public BoardResponse createBoard(
             CreateBoardRequest request, User currentUser) {
-
-        if (!authorizationService.isAdmin(currentUser)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Only administrators can manage boards");
-        }
 
         Department department =
                 departmentRepository
@@ -90,6 +87,11 @@ public class BoardService {
                                         "Department not found"
                                 )
                         );
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                department.getId()
+        );
 
         if (boardRepository
                 .existsByNameIgnoreCaseAndDepartmentId(

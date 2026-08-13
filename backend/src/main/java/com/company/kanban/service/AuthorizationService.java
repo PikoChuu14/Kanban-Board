@@ -32,6 +32,17 @@ public class AuthorizationService {
         }
     }
 
+    public void requireBoardManagementAccess(User user, Long departmentId) {
+        if (isAdmin(user)) {
+            return;
+        }
+
+        if (user == null || user.getRole() != Role.MANAGER
+                || !canAccessDepartment(user, departmentId)) {
+            throw forbidden();
+        }
+    }
+
     public void requireBoardAccess(User user, Board board) {
         requireDepartmentAccess(user, board.getDepartment().getId());
     }
