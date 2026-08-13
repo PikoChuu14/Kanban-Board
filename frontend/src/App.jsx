@@ -3,6 +3,7 @@ import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
 import CreateBoardModal from "./components/CreateBoardModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
+import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
 import { apiFetch } from "./api/apiFetch";
@@ -40,6 +41,7 @@ function App() {
   const [boards, setBoards] = useState([]);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
   const [showCreateBoard, setShowCreateBoard] = useState(false);
+  const [boardToEdit, setBoardToEdit] = useState(null);
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
@@ -137,7 +139,7 @@ function App() {
     }
   }, [user, isAdmin]);
 
-  const loadBoards = useCallback(async (departmentId) => {
+  const loadBoards = useCallback(async (departmentId, preferredBoardId = null) => {
     try {
       const response = await apiFetch(
         `${API_BASE_URL}/api/boards/department/${departmentId}`
@@ -155,7 +157,12 @@ function App() {
       setBoards(data);
 
       if (data.length > 0) {
-        setSelectedBoardId(data[0].id);
+        const selectedBoardStillExists = data.some(
+          (board) => board.id === preferredBoardId
+        );
+        setSelectedBoardId(
+          selectedBoardStillExists ? preferredBoardId : data[0].id
+        );
       } else {
         setSelectedBoardId(null);
         setColumns([]);
@@ -445,8 +452,11 @@ function App() {
 
   async function handleBoardCreated(createdBoard) {
     setSelectedDepartmentId(createdBoard.departmentId);
-    await loadBoards(createdBoard.departmentId);
-    setSelectedBoardId(createdBoard.id);
+    await loadBoards(createdBoard.departmentId, createdBoard.id);
+  }
+
+  async function handleBoardUpdated(updatedBoard) {
+    await loadBoards(updatedBoard.departmentId, updatedBoard.id);
   }
 
   function requestDeleteTask(task) {
@@ -570,13 +580,25 @@ function App() {
         </div>
 
         {canManageBoards && (
-          <button
-            type="button"
-            className="create-board-button"
-            onClick={() => setShowCreateBoard(true)}
-          >
-            + Create Board
-          </button>
+          <>
+            <button
+              type="button"
+              className="create-board-button"
+              onClick={() => setBoardToEdit(
+                boards.find((board) => board.id === selectedBoardId) ?? null
+              )}
+              disabled={selectedBoardId === null}
+            >
+              Edit Board
+            </button>
+            <button
+              type="button"
+              className="create-board-button"
+              onClick={() => setShowCreateBoard(true)}
+            >
+              + Create Board
+            </button>
+          </>
         )}
       </div>
 
@@ -676,6 +698,13 @@ function App() {
         departments={departments}
         onClose={() => setShowCreateBoard(false)}
         onCreated={handleBoardCreated}
+      />
+
+      <EditBoardModal
+        key={boardToEdit?.id ?? "closed"}
+        board={boardToEdit}
+        onClose={() => setBoardToEdit(null)}
+        onUpdated={handleBoardUpdated}
       />
 
       <EditTaskModal

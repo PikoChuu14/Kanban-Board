@@ -2,6 +2,7 @@ package com.company.kanban.controller;
 
 import com.company.kanban.dto.BoardResponse;
 import com.company.kanban.dto.CreateBoardRequest;
+import com.company.kanban.dto.UpdateBoardRequest;
 import com.company.kanban.service.BoardService;
 import com.company.kanban.entity.User;
 import jakarta.validation.Valid;
@@ -51,5 +52,14 @@ public class BoardController {
             @AuthenticationPrincipal User currentUser) {
 
         return boardService.createBoard(request, currentUser);
+    }
+
+    @PutMapping("/{id}")
+    public BoardResponse updateBoard(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateBoardRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        return boardService.updateBoard(id, request, currentUser);
     }
 }

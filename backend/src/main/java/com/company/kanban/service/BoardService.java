@@ -2,6 +2,7 @@ package com.company.kanban.service;
 
 import com.company.kanban.dto.BoardResponse;
 import com.company.kanban.dto.CreateBoardRequest;
+import com.company.kanban.dto.UpdateBoardRequest;
 import com.company.kanban.entity.Board;
 import com.company.kanban.entity.Department;
 import com.company.kanban.entity.KanbanColumn;
@@ -130,6 +131,37 @@ public class BoardService {
         );
 
         return toResponse(savedBoard);
+    }
+
+    @Transactional
+    public BoardResponse updateBoard(
+            Long boardId, UpdateBoardRequest request, User currentUser) {
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Board not found"
+                ));
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                board.getDepartment().getId()
+        );
+
+        if (!board.getName().equalsIgnoreCase(request.name())
+                && boardRepository.existsByNameIgnoreCaseAndDepartmentId(
+                        request.name(), board.getDepartment().getId())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A board with this name already exists in this department"
+            );
+        }
+
+        board.setName(request.name());
+        board.setDescription(request.description());
+
+        return toResponse(board);
     }
 
     private BoardResponse toResponse(Board board) {
