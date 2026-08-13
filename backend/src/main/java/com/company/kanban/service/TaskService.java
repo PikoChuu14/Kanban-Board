@@ -76,6 +76,11 @@ public class TaskService {
                                     "Assignee not found"
                             )
                     );
+            authorizationService.requireAssignableUser(currentUser, assignee);
+            authorizationService.requireAssigneeMatchesTaskDepartment(
+                    assignee,
+                    column.getBoard().getDepartment()
+            );
         }
 
         int position =
@@ -122,6 +127,11 @@ public class TaskService {
                                     "Assignee not found"
                             )
                     );
+            authorizationService.requireAssignableUser(currentUser, assignee);
+            authorizationService.requireAssigneeMatchesTaskDepartment(
+                    assignee,
+                    task.getColumn().getBoard().getDepartment()
+            );
         }
 
         task.setTitle(request.title());

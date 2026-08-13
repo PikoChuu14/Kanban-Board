@@ -183,30 +183,28 @@ function App() {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setUsers([]);
       return;
     }
 
-    async function loadUsers() {
+    async function loadAssignableUsers() {
       try {
-        const response = await apiFetch(`${API_BASE_URL}/api/users`);
+        const response = await apiFetch(`${API_BASE_URL}/api/users/assignable`);
 
         if (!response.ok) {
-          throw new Error(`Users request failed (${response.status}).`);
+          throw new Error(`Assignable users request failed (${response.status}).`);
         }
 
         setUsers(await response.json());
       } catch (error) {
-        console.error("Failed to load users:", error);
+        console.error("Failed to load assignable users:", error);
       }
     }
 
-    if (isAdmin) {
-      loadUsers();
-      return;
+    if (user) {
+      loadAssignableUsers();
     }
-
-    setUsers([]);
-  }, [isAuthenticated, isAdmin]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     tasksByColumnRef.current = tasksByColumn;

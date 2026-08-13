@@ -1,6 +1,7 @@
 package com.company.kanban.service;
 
 import com.company.kanban.entity.Board;
+import com.company.kanban.entity.Department;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Role;
 import com.company.kanban.entity.Task;
@@ -41,6 +42,42 @@ public class AuthorizationService {
 
     public void requireTaskAccess(User user, Task task) {
         requireColumnAccess(user, task.getColumn());
+    }
+
+    public void requireAssignableUser(User currentUser, User assignee) {
+        if (isAdmin(currentUser)) {
+            return;
+        }
+
+        if (currentUser == null
+                || currentUser.getDepartment() == null
+                || assignee == null
+                || assignee.getDepartment() == null
+                || !currentUser.getDepartment().getId()
+                .equals(assignee.getDepartment().getId())) {
+
+            throw forbidden();
+        }
+    }
+
+    public void requireAssigneeMatchesTaskDepartment(
+            User assignee,
+            Department taskDepartment) {
+
+        if (assignee == null) {
+            return;
+        }
+
+        if (taskDepartment == null
+                || assignee.getDepartment() == null
+                || !assignee.getDepartment().getId()
+                .equals(taskDepartment.getId())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Assignee must belong to the task's department"
+            );
+        }
     }
 
     private ResponseStatusException forbidden() {
