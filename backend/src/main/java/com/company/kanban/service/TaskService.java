@@ -6,6 +6,7 @@ import com.company.kanban.dto.TaskResponse;
 import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Task;
+import com.company.kanban.entity.TaskStatus;
 import com.company.kanban.entity.User;
 import com.company.kanban.repository.KanbanColumnRepository;
 import com.company.kanban.repository.TaskRepository;
@@ -95,6 +96,9 @@ public class TaskService {
                 column,
                 assignee
         );
+        task.setCreatedBy(currentUser);
+        task.setWorkload(request.workload());
+        task.setStatus(statusFromColumn(column));
 
         Task savedTask = taskRepository.save(task);
 
@@ -139,6 +143,7 @@ public class TaskService {
         task.setPriority(request.priority());
         task.setDueDate(request.dueDate());
         task.setAssignee(assignee);
+        task.setWorkload(request.workload());
 
         Task savedTask = taskRepository.save(task);
 
@@ -199,6 +204,7 @@ public class TaskService {
         );
 
         task.setColumn(targetColumn);
+        task.setStatus(statusFromColumn(targetColumn));
 
         targetTasks.add(
                 targetPosition - 1,
@@ -261,23 +267,46 @@ public class TaskService {
     private TaskResponse toResponse(Task task) {
 
         User assignee = task.getAssignee();
+        User createdBy = task.getCreatedBy();
+        KanbanColumn column = task.getColumn();
 
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getDescription(),
                 task.getPriority(),
+                task.getStatus(),
+                task.getWorkload(),
                 task.getDueDate(),
                 task.getPosition(),
 
-                task.getColumn().getId(),
-                task.getColumn().getName(),
+                column.getBoard().getId(),
+                column.getBoard().getName(),
+
+                column.getId(),
+                column.getName(),
 
                 assignee != null ? assignee.getId() : null,
                 assignee != null ? assignee.getName() : null,
 
+                createdBy != null ? createdBy.getId() : null,
+                createdBy != null ? createdBy.getName() : null,
+
                 task.getCreatedAt(),
                 task.getUpdatedAt()
         );
+    }
+
+    private TaskStatus statusFromColumn(KanbanColumn column) {
+        return switch (column.getName()) {
+            case "To Do" -> TaskStatus.DRAFT;
+            case "In Progress" -> TaskStatus.DOING;
+            case "Review" -> TaskStatus.REVIEW;
+            case "Done" -> TaskStatus.DONE;
+            default -> throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Unsupported Kanban column"
+            );
+        };
     }
 }

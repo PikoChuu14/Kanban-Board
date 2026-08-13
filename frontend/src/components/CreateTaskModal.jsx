@@ -9,6 +9,7 @@ const INITIAL_FORM = {
   priority: "MEDIUM",
   dueDate: "",
   assigneeId: "",
+  workload: "3",
 };
 
 function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
@@ -55,6 +56,7 @@ function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
           assigneeId: formData.assigneeId
             ? Number(formData.assigneeId)
             : null,
+          workload: Number(formData.workload),
         }),
       });
 
@@ -168,6 +170,20 @@ function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
               />
             </div>
           </div>
+
+          <label htmlFor="task-workload">Workload</label>
+          <select
+            id="task-workload"
+            name="workload"
+            value={formData.workload}
+            onChange={handleChange}
+          >
+            <option value="1">1 — Very Small</option>
+            <option value="2">2 — Small</option>
+            <option value="3">3 — Medium</option>
+            <option value="4">4 — Large</option>
+            <option value="5">5 — Very Large</option>
+          </select>
 
           <label htmlFor="task-assignee">Assignee</label>
           <select

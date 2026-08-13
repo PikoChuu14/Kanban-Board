@@ -23,6 +23,11 @@ public class Task {
     @Column(nullable = false)
     private Priority priority;
 
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
+
+    private Integer workload;
+
     private LocalDate dueDate;
 
     @Column(nullable = false)
@@ -35,6 +40,10 @@ public class Task {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private User assignee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -61,6 +70,18 @@ public class Task {
         this.position = position;
         this.column = column;
         this.assignee = assignee;
+    }
+
+    public TaskStatus getStatus() {
+        return status;
+    }
+
+    public Integer getWorkload() {
+        return workload;
+    }
+
+    public User getCreatedBy() {
+        return createdBy;
     }
 
     @PrePersist
@@ -140,5 +161,17 @@ public class Task {
 
     public void setAssignee(User assignee) {
         this.assignee = assignee;
+    }
+
+    public void setStatus(TaskStatus status) {
+        this.status = status;
+    }
+
+    public void setWorkload(Integer workload) {
+        this.workload = workload;
+    }
+
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
     }
 }

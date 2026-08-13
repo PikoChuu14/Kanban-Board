@@ -20,13 +20,17 @@ function TaskCardContent({ task }) {
 
       <p>{task.description}</p>
 
+      {task.boardName && <small className="task-board-name">{task.boardName}</small>}
+
       <div className="task-meta">
-        <span>{task.priority}</span>
+        <span>{task.priority} · Workload {task.workload ?? "—"}</span>
 
         {task.assigneeName && <span>{task.assigneeName}</span>}
       </div>
 
       {task.dueDate && <small>Due: {task.dueDate}</small>}
+
+      {task.createdByName && <small>Created by {task.createdByName}</small>}
     </>
   );
 }

@@ -11,6 +11,7 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelet
   const [assigneeId, setAssigneeId] = useState(
     task?.assigneeId != null ? String(task.assigneeId) : ""
   );
+  const [workload, setWorkload] = useState(String(task?.workload ?? 3));
   const [error, setError] = useState("");
 
   if (!task) {
@@ -30,6 +31,7 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelet
           priority,
           dueDate: dueDate || null,
           assigneeId: assigneeId === "" ? null : Number(assigneeId),
+          workload: Number(workload),
         }),
       });
 
@@ -58,6 +60,7 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelet
             <h2>Edit Task</h2>
             <p>Update the task details without moving it.</p>
           </div>
+
           <button
             type="button"
             className="modal-close-button"
@@ -112,6 +115,19 @@ function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelet
               />
             </div>
           </div>
+
+          <label htmlFor="edit-task-workload">Workload</label>
+          <select
+            id="edit-task-workload"
+            value={workload}
+            onChange={(event) => setWorkload(event.target.value)}
+          >
+            <option value="1">1 — Very Small</option>
+            <option value="2">2 — Small</option>
+            <option value="3">3 — Medium</option>
+            <option value="4">4 — Large</option>
+            <option value="5">5 — Very Large</option>
+          </select>
 
           <label htmlFor="edit-task-assignee">Assignee</label>
           <select
