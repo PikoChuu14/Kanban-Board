@@ -53,6 +53,18 @@ public class TaskService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getMyTasks(User currentUser) {
+
+        return taskRepository
+                .findByAssigneeIdOrderByStatusAscPositionAsc(
+                        currentUser.getId()
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public TaskResponse createTask(CreateTaskRequest request, User currentUser) {
 

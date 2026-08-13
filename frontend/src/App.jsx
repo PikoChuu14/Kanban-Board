@@ -7,6 +7,7 @@ import ConfirmDeleteBoardModal from "./components/ConfirmDeleteBoardModal";
 import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
+import PersonalKanban from "./pages/PersonalKanban";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -41,6 +42,8 @@ function App() {
   const isManager = user?.role === "MANAGER";
   const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
+  const canViewProjectBoard = isAdmin || isManager;
+  const [activeView, setActiveView] = useState("personal");
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -107,6 +110,14 @@ function App() {
       console.error("Failed to load board:", error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      return;
+    }
+
+    setActiveView(user.role === "ADMIN" ? "project" : "personal");
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -584,6 +595,25 @@ function App() {
         </button>
       </div>
 
+      {canViewProjectBoard && (
+        <div className="view-toolbar">
+          <button
+            type="button"
+            className={activeView === "personal" ? "active" : ""}
+            onClick={() => setActiveView("personal")}
+          >
+            My Work
+          </button>
+          <button
+            type="button"
+            className={activeView === "project" ? "active" : ""}
+            onClick={() => setActiveView("project")}
+          >
+            Project Board
+          </button>
+        </div>
+      )}
+
       {permissionMessage && (
         <div className="permission-message" role="alert">
           {permissionMessage}
@@ -591,6 +621,10 @@ function App() {
         </div>
       )}
 
+      {activeView === "personal" ? (
+        <PersonalKanban />
+      ) : (
+        <>
       <h1>
         {boards.find((board) => board.id === selectedBoardId)?.name ||
           "Company Kanban"}
@@ -753,6 +787,8 @@ function App() {
             <TaskCardContent task={dragPreview.task} />
           </div>
         </div>
+      )}
+        </>
       )}
 
       {selectedColumn && (

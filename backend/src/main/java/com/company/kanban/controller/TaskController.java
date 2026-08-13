@@ -31,6 +31,13 @@ public class TaskController {
         return taskService.getTasksByColumn(columnId, currentUser);
     }
 
+    @GetMapping("/my")
+    public List<TaskResponse> getMyTasks(
+            @AuthenticationPrincipal User currentUser) {
+
+        return taskService.getMyTasks(currentUser);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TaskResponse createTask(

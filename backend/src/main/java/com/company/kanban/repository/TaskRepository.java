@@ -15,6 +15,8 @@ public interface TaskRepository
             Long taskId
     );
 
+    List<Task> findByAssigneeIdOrderByStatusAscPositionAsc(Long assigneeId);
+
     int countByColumnId(Long columnId);
 
     boolean existsByColumnBoardId(Long boardId);
