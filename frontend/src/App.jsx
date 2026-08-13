@@ -31,7 +31,8 @@ function TaskCardContent({ task }) {
 function App() {
   const { user, logout, loading, isAuthenticated } = useAuth();
   const isAdmin = user?.role === "ADMIN";
-  const canDeleteTasks = isAdmin || user?.role === "MANAGER";
+  const isManager = user?.role === "MANAGER";
+  const canDeleteTask = isAdmin || isManager;
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -96,6 +97,7 @@ function App() {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      setUsers([]);
       return;
     }
 
@@ -121,6 +123,16 @@ function App() {
 
     loadDepartments();
   }, [isAuthenticated, isAdmin, user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (!isAdmin) {
+      setSelectedDepartmentId(user.departmentId);
+    }
+  }, [user, isAdmin]);
 
   useEffect(() => {
     if (selectedDepartmentId === null) {
@@ -190,7 +202,10 @@ function App() {
 
     if (isAdmin) {
       loadUsers();
+      return;
     }
+
+    setUsers([]);
   }, [isAuthenticated, isAdmin]);
 
   useEffect(() => {
@@ -505,22 +520,29 @@ function App() {
 
       <div className="board-toolbar">
         <div className="toolbar-field">
-          <label htmlFor="department-select">Department</label>
+          <label htmlFor={isAdmin ? "department-select" : undefined}>
+            Department
+          </label>
 
-          <select
-            id="department-select"
-            value={selectedDepartmentId ?? ""}
-            disabled={!isAdmin}
-            onChange={(event) =>
-              setSelectedDepartmentId(Number(event.target.value))
-            }
-          >
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
+          {isAdmin ? (
+            <select
+              id="department-select"
+              value={selectedDepartmentId ?? ""}
+              onChange={(event) =>
+                setSelectedDepartmentId(Number(event.target.value))
+              }
+            >
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="department-display" aria-label="Department">
+              {user?.departmentName}
+            </div>
+          )}
         </div>
 
         <div className="toolbar-field">
@@ -637,12 +659,12 @@ function App() {
         key={selectedTask?.id ?? "closed"}
         task={selectedTask}
         users={users}
+        canDelete={canDeleteTask}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={() =>
           selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
         }
         onDelete={requestDeleteTask}
-        canDelete={canDeleteTasks}
       />
 
       <ConfirmDeleteModal

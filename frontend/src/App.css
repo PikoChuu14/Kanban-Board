@@ -40,6 +40,20 @@
   font-size: 14px;
 }
 
+.department-display {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: 220px;
+  min-height: 35px;
+  padding: 8px 10px;
+  border: 1px solid #3a404b;
+  border-radius: 6px;
+  background: #242932;
+  color: #f5f5f5;
+  font-size: 14px;
+}
+
 .empty-state {
   padding: 32px;
   background: #1a1d23;
