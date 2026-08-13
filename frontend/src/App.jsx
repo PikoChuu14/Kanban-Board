@@ -3,6 +3,9 @@ import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
 import EditTaskModal from "./components/EditTaskModal";
+import LoginPage from "./components/LoginPage";
+import { apiFetch } from "./api/apiFetch";
+import { useAuth } from "./context/AuthContext";
 
 const API_BASE_URL = "http://localhost:8080";
 const DRAG_START_THRESHOLD = 6;
@@ -26,7 +29,14 @@ function TaskCardContent({ task }) {
 }
 
 function App() {
-  const boardId = 2;
+  const { user, logout, loading, isAuthenticated } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+  const isManager = user?.role === "MANAGER";
+  const canDeleteTask = isAdmin || isManager;
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+  const [boards, setBoards] = useState([]);
+  const [selectedBoardId, setSelectedBoardId] = useState(null);
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
@@ -38,19 +48,23 @@ function App() {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
+  const [permissionMessage, setPermissionMessage] = useState("");
   const draggedTaskRef = useRef(null);
   const dropIndicatorRef = useRef(null);
   const pointerDownRef = useRef(null);
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
 
-  const loadBoard = useCallback(async () => {
+  const loadBoard = useCallback(async (boardId) => {
     try {
-      const columnsResponse = await fetch(
+      const columnsResponse = await apiFetch(
         `${API_BASE_URL}/api/columns/board/${boardId}`
       );
 
       if (!columnsResponse.ok) {
+        if (columnsResponse.status === 403) {
+          setPermissionMessage("You do not have permission to access this department.");
+        }
         throw new Error(`Columns request failed (${columnsResponse.status}).`);
       }
 
@@ -59,7 +73,7 @@ function App() {
 
       const taskEntries = await Promise.all(
         columnData.map(async (column) => {
-          const taskResponse = await fetch(
+          const taskResponse = await apiFetch(
             `${API_BASE_URL}/api/tasks/column/${column.id}`
           );
 
@@ -77,35 +91,120 @@ function App() {
 
       setTasksByColumn(Object.fromEntries(taskEntries));
     } catch (error) {
-      console.error("Failed to load Kanban board:", error);
+      console.error("Failed to load board:", error);
     }
-  }, [boardId]);
+  }, []);
 
   useEffect(() => {
-    async function initializeBoard() {
-      await loadBoard();
+    if (!isAuthenticated) {
+      setUsers([]);
+      return;
     }
 
-    initializeBoard();
-  }, [loadBoard]);
-
-  useEffect(() => {
-    async function loadUsers() {
+    async function loadDepartments() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/users`);
+        const response = await apiFetch(`${API_BASE_URL}/api/departments`);
 
         if (!response.ok) {
-          throw new Error(`Users request failed (${response.status}).`);
+          throw new Error(`Departments request failed (${response.status}).`);
+        }
+
+        const data = await response.json();
+
+        setDepartments(data);
+
+        if (data.length > 0) {
+          setSelectedDepartmentId(isAdmin ? data[0].id : user.departmentId);
+        }
+      } catch (error) {
+        console.error("Failed to load departments:", error);
+      }
+    }
+
+    loadDepartments();
+  }, [isAuthenticated, isAdmin, user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (!isAdmin) {
+      setSelectedDepartmentId(user.departmentId);
+    }
+  }, [user, isAdmin]);
+
+  useEffect(() => {
+    if (selectedDepartmentId === null) {
+      return;
+    }
+
+    async function loadBoards() {
+      try {
+        const response = await apiFetch(
+          `${API_BASE_URL}/api/boards/department/${selectedDepartmentId}`
+        );
+
+        if (!response.ok) {
+          if (response.status === 403) {
+            setPermissionMessage("You do not have permission to access this department.");
+          }
+          throw new Error(`Boards request failed (${response.status}).`);
+        }
+
+        const data = await response.json();
+
+        setBoards(data);
+
+        if (data.length > 0) {
+          setSelectedBoardId(data[0].id);
+        } else {
+          setSelectedBoardId(null);
+          setColumns([]);
+          setTasksByColumn({});
+        }
+      } catch (error) {
+        console.error("Failed to load boards:", error);
+      }
+    }
+
+    loadBoards();
+  }, [selectedDepartmentId]);
+
+  useEffect(() => {
+    if (selectedBoardId !== null) {
+      loadBoard(selectedBoardId);
+      return;
+    }
+
+    setColumns([]);
+    setTasksByColumn({});
+  }, [selectedBoardId, loadBoard]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUsers([]);
+      return;
+    }
+
+    async function loadAssignableUsers() {
+      try {
+        const response = await apiFetch(`${API_BASE_URL}/api/users/assignable`);
+
+        if (!response.ok) {
+          throw new Error(`Assignable users request failed (${response.status}).`);
         }
 
         setUsers(await response.json());
       } catch (error) {
-        console.error("Failed to load users:", error);
+        console.error("Failed to load assignable users:", error);
       }
     }
 
-    loadUsers();
-  }, []);
+    if (user) {
+      loadAssignableUsers();
+    }
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     tasksByColumnRef.current = tasksByColumn;
@@ -304,32 +403,31 @@ function App() {
   const moveTask = useCallback(
     async (task, targetColumnId, targetPosition) => {
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/tasks/${task.id}/move`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              targetColumnId,
-              targetPosition,
-            }),
-          }
-        );
+        const response = await apiFetch(`${API_BASE_URL}/api/tasks/${task.id}/move`, {
+          method: "PUT",
+          body: JSON.stringify({
+            targetColumnId,
+            targetPosition,
+          }),
+        });
 
         if (!response.ok) {
+          if (response.status === 403) {
+            setPermissionMessage("You do not have permission to perform this action.");
+          }
           throw new Error("Failed to move task");
         }
 
         setDraggedTask(null);
         setDropIndicator(null);
-        await loadBoard();
+        if (selectedBoardId !== null) {
+          await loadBoard(selectedBoardId);
+        }
       } catch (error) {
         console.error("Failed to move task:", error);
       }
     },
-    [loadBoard]
+    [loadBoard, selectedBoardId]
   );
 
   useEffect(() => {
@@ -357,17 +455,22 @@ function App() {
     setDeletingTask(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks/${taskToDelete.id}`, {
+      const response = await apiFetch(`${API_BASE_URL}/api/tasks/${taskToDelete.id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to delete this task.");
+        }
         throw new Error("Failed to delete task");
       }
 
       setTaskToDelete(null);
 
-      await loadBoard();
+      if (selectedBoardId !== null) {
+        await loadBoard(selectedBoardId);
+      }
     } catch (error) {
       console.error("Failed to delete task:", error);
     } finally {
@@ -375,64 +478,153 @@ function App() {
     }
   }
 
+  if (loading) {
+    return <div className="app-loading">Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="app">
-      <h1>PPC Workflow Board</h1>
+      <div className="user-toolbar">
+        <div>
+          <strong>{user?.name}</strong>
 
-      <div className="kanban-board">
-        {columns.map((column) => (
-          <div
-            className="kanban-column"
-            key={column.id}
-            data-column-id={column.id}
-          >
-            <div className="column-header">
-              <h2>{column.name}</h2>
-              <button
-                type="button"
-                className="add-task-button"
-                onClick={() => openCreateTaskModal(column)}
-              >
-                + Add Task
-              </button>
-            </div>
+          <span>
+            {user?.departmentName}
+            {" \u00b7 "}
+            {user?.role}
+          </span>
+        </div>
 
-            <div className="task-list">
-              {(tasksByColumn[column.id] || []).map((task) => (
-                <div key={task.id} className="task-wrapper">
-                  {dropIndicator?.columnId === column.id &&
-                    dropIndicator?.taskId === task.id &&
-                    dropIndicator?.position === "before" && (
-                      <div className="drop-indicator" />
-                    )}
-
-                  <div
-                    className={`task-card ${
-                      draggedTask?.id === task.id ? "task-card--dragging" : ""
-                    }`}
-                    data-column-id={column.id}
-                    data-task-id={task.id}
-                    onPointerDown={(event) => handlePointerDown(event, task)}
-                  >
-                    <TaskCardContent task={task} />
-                  </div>
-
-                  {dropIndicator?.columnId === column.id &&
-                    dropIndicator?.taskId === task.id &&
-                    dropIndicator?.position === "after" && (
-                      <div className="drop-indicator" />
-                    )}
-                </div>
-              ))}
-
-              {dropIndicator?.columnId === column.id &&
-                dropIndicator?.taskId === null && (
-                  <div className="drop-indicator" />
-                )}
-            </div>
-          </div>
-        ))}
+        <button type="button" onClick={logout}>
+          Logout
+        </button>
       </div>
+
+      {permissionMessage && (
+        <div className="permission-message" role="alert">
+          {permissionMessage}
+          <button type="button" onClick={() => setPermissionMessage("")}>Dismiss</button>
+        </div>
+      )}
+
+      <h1>
+        {boards.find((board) => board.id === selectedBoardId)?.name ||
+          "Company Kanban"}
+      </h1>
+
+      <div className="board-toolbar">
+        <div className="toolbar-field">
+          <label htmlFor={isAdmin ? "department-select" : undefined}>
+            Department
+          </label>
+
+          {isAdmin ? (
+            <select
+              id="department-select"
+              value={selectedDepartmentId ?? ""}
+              onChange={(event) =>
+                setSelectedDepartmentId(Number(event.target.value))
+              }
+            >
+              {departments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="department-display" aria-label="Department">
+              {user?.departmentName}
+            </div>
+          )}
+        </div>
+
+        <div className="toolbar-field">
+          <label htmlFor="board-select">Board</label>
+
+          <select
+            id="board-select"
+            value={selectedBoardId ?? ""}
+            onChange={(event) =>
+              setSelectedBoardId(Number(event.target.value))
+            }
+            disabled={boards.length === 0}
+          >
+            {boards.map((board) => (
+              <option key={board.id} value={board.id}>
+                {board.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {selectedDepartmentId !== null && boards.length === 0 && (
+        <div className="empty-state">
+          <p>No boards found for this department.</p>
+        </div>
+      )}
+
+      {selectedBoardId !== null && (
+        <div className="kanban-board">
+          {columns.map((column) => (
+            <div
+              className="kanban-column"
+              key={column.id}
+              data-column-id={column.id}
+            >
+              <div className="column-header">
+                <h2>{column.name}</h2>
+                <button
+                  type="button"
+                  className="add-task-button"
+                  onClick={() => openCreateTaskModal(column)}
+                >
+                  + Add Task
+                </button>
+              </div>
+
+              <div className="task-list">
+                {(tasksByColumn[column.id] || []).map((task) => (
+                  <div key={task.id} className="task-wrapper">
+                    {dropIndicator?.columnId === column.id &&
+                      dropIndicator?.taskId === task.id &&
+                      dropIndicator?.position === "before" && (
+                        <div className="drop-indicator" />
+                      )}
+
+                    <div
+                      className={`task-card ${
+                        draggedTask?.id === task.id ? "task-card--dragging" : ""
+                      }`}
+                      data-column-id={column.id}
+                      data-task-id={task.id}
+                      onPointerDown={(event) => handlePointerDown(event, task)}
+                    >
+                      <TaskCardContent task={task} />
+                    </div>
+
+                    {dropIndicator?.columnId === column.id &&
+                      dropIndicator?.taskId === task.id &&
+                      dropIndicator?.position === "after" && (
+                        <div className="drop-indicator" />
+                      )}
+                  </div>
+                ))}
+
+                {dropIndicator?.columnId === column.id &&
+                  dropIndicator?.taskId === null && (
+                    <div className="drop-indicator" />
+                  )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {dragPreview && (
         <div
@@ -455,7 +647,9 @@ function App() {
           column={selectedColumn}
           users={users}
           onClose={closeCreateTaskModal}
-          onCreated={loadBoard}
+          onCreated={() =>
+            selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
+          }
         />
       )}
 
@@ -463,8 +657,11 @@ function App() {
         key={selectedTask?.id ?? "closed"}
         task={selectedTask}
         users={users}
+        canDelete={canDeleteTask}
         onClose={() => setSelectedTask(null)}
-        onTaskUpdated={loadBoard}
+        onTaskUpdated={() =>
+          selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
+        }
         onDelete={requestDeleteTask}
       />
 

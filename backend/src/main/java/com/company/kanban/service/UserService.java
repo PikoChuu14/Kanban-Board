@@ -3,12 +3,14 @@ package com.company.kanban.service;
 import com.company.kanban.dto.CreateUserRequest;
 import com.company.kanban.dto.UserResponse;
 import com.company.kanban.entity.Department;
+import com.company.kanban.entity.Role;
 import com.company.kanban.entity.User;
 import com.company.kanban.repository.DepartmentRepository;
 import com.company.kanban.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -36,6 +38,23 @@ public class UserService {
                 .map(this::toResponse)
                 .toList();
     }
+
+        @Transactional(readOnly = true)
+        public List<UserResponse> getAssignableUsers(User currentUser) {
+                List<User> users;
+
+                if (currentUser.getRole() == Role.ADMIN) {
+                        users = userRepository.findAll();
+                } else {
+                        users = userRepository.findByDepartmentIdOrderByNameAsc(
+                                        currentUser.getDepartment().getId()
+                        );
+                }
+
+                return users.stream()
+                                .map(this::toResponse)
+                                .toList();
+        }
 
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)

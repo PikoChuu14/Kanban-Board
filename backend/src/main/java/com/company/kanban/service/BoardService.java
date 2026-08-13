@@ -5,6 +5,7 @@ import com.company.kanban.dto.CreateBoardRequest;
 import com.company.kanban.entity.Board;
 import com.company.kanban.entity.Department;
 import com.company.kanban.entity.KanbanColumn;
+import com.company.kanban.entity.User;
 import com.company.kanban.repository.BoardRepository;
 import com.company.kanban.repository.DepartmentRepository;
 import com.company.kanban.repository.KanbanColumnRepository;
@@ -21,26 +22,32 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final DepartmentRepository departmentRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
+    private final AuthorizationService authorizationService;
 
     public BoardService(
             BoardRepository boardRepository,
             DepartmentRepository departmentRepository,
-            KanbanColumnRepository kanbanColumnRepository) {
+            KanbanColumnRepository kanbanColumnRepository,
+            AuthorizationService authorizationService) {
 
         this.boardRepository = boardRepository;
         this.departmentRepository = departmentRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
+        this.authorizationService = authorizationService;
     }
 
-    public List<BoardResponse> getAllBoards() {
+    public List<BoardResponse> getAllBoards(User currentUser) {
 
-        return boardRepository.findAll()
+        List<Board> boards = authorizationService.isAdmin(currentUser)
+                ? boardRepository.findAll()
+                : boardRepository.findByDepartmentId(currentUser.getDepartment().getId());
+        return boards
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public BoardResponse getBoardById(Long id) {
+    public BoardResponse getBoardById(Long id, User currentUser) {
 
         Board board = boardRepository.findById(id)
                 .orElseThrow(() ->
@@ -49,12 +56,15 @@ public class BoardService {
                                 "Board not found"
                         )
                 );
+        authorizationService.requireBoardAccess(currentUser, board);
 
         return toResponse(board);
     }
 
     public List<BoardResponse> getBoardsByDepartment(
-            Long departmentId) {
+            Long departmentId, User currentUser) {
+
+        authorizationService.requireDepartmentAccess(currentUser, departmentId);
 
         return boardRepository
                 .findByDepartmentId(departmentId)
@@ -64,7 +74,12 @@ public class BoardService {
     }
 
     public BoardResponse createBoard(
-            CreateBoardRequest request) {
+            CreateBoardRequest request, User currentUser) {
+
+        if (!authorizationService.isAdmin(currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Only administrators can manage boards");
+        }
 
         Department department =
                 departmentRepository

@@ -23,19 +23,27 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
 
     public TaskService(
             TaskRepository taskRepository,
             KanbanColumnRepository kanbanColumnRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            AuthorizationService authorizationService) {
 
         this.taskRepository = taskRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.userRepository = userRepository;
+        this.authorizationService = authorizationService;
     }
 
     @Transactional(readOnly = true)
-    public List<TaskResponse> getTasksByColumn(Long columnId) {
+    public List<TaskResponse> getTasksByColumn(Long columnId, User currentUser) {
+
+        KanbanColumn column = kanbanColumnRepository.findById(columnId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Column not found"));
+        authorizationService.requireColumnAccess(currentUser, column);
 
         return taskRepository
                 .findByColumnIdOrderByPositionAsc(columnId)
@@ -45,7 +53,7 @@ public class TaskService {
     }
 
     @Transactional
-    public TaskResponse createTask(CreateTaskRequest request) {
+    public TaskResponse createTask(CreateTaskRequest request, User currentUser) {
 
         KanbanColumn column =
                 kanbanColumnRepository.findById(request.columnId())
@@ -55,6 +63,7 @@ public class TaskService {
                                         "Column not found"
                                 )
                         );
+        authorizationService.requireColumnAccess(currentUser, column);
 
         User assignee = null;
 
@@ -67,6 +76,11 @@ public class TaskService {
                                     "Assignee not found"
                             )
                     );
+            authorizationService.requireAssignableUser(currentUser, assignee);
+            authorizationService.requireAssigneeMatchesTaskDepartment(
+                    assignee,
+                    column.getBoard().getDepartment()
+            );
         }
 
         int position =
@@ -90,7 +104,8 @@ public class TaskService {
     @Transactional
     public TaskResponse updateTask(
             Long taskId,
-            UpdateTaskRequest request) {
+            UpdateTaskRequest request,
+            User currentUser) {
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() ->
@@ -99,6 +114,7 @@ public class TaskService {
                                 "Task not found"
                         )
                 );
+        authorizationService.requireTaskAccess(currentUser, task);
 
         User assignee = null;
 
@@ -111,6 +127,11 @@ public class TaskService {
                                     "Assignee not found"
                             )
                     );
+            authorizationService.requireAssignableUser(currentUser, assignee);
+            authorizationService.requireAssigneeMatchesTaskDepartment(
+                    assignee,
+                    task.getColumn().getBoard().getDepartment()
+            );
         }
 
         task.setTitle(request.title());
@@ -127,7 +148,8 @@ public class TaskService {
     @Transactional
     public TaskResponse moveTask(
             Long taskId,
-            MoveTaskRequest request) {
+            MoveTaskRequest request,
+            User currentUser) {
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() ->
@@ -136,6 +158,7 @@ public class TaskService {
                                 "Task not found"
                         )
                 );
+        authorizationService.requireTaskAccess(currentUser, task);
 
         KanbanColumn sourceColumn = task.getColumn();
 
@@ -147,6 +170,7 @@ public class TaskService {
                                         "Target column not found"
                                 )
                         );
+        authorizationService.requireColumnAccess(currentUser, targetColumn);
 
         if (!sourceColumn.getBoard().getId()
                 .equals(targetColumn.getBoard().getId())) {
@@ -207,7 +231,7 @@ public class TaskService {
     }
 
     @Transactional
-    public void deleteTask(Long taskId) {
+    public void deleteTask(Long taskId, User currentUser) {
 
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() ->
@@ -216,6 +240,7 @@ public class TaskService {
                                 "Task not found"
                         )
                 );
+        authorizationService.requireTaskAccess(currentUser, task);
 
         Long columnId = task.getColumn().getId();
 

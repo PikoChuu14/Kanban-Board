@@ -11,6 +11,56 @@
   font-size: 32px;
 }
 
+.board-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.toolbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.toolbar-field label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.toolbar-field select {
+  min-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+  color: #222;
+  font-size: 14px;
+}
+
+.department-display {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-width: 220px;
+  min-height: 35px;
+  padding: 8px 10px;
+  border: 1px solid #3a404b;
+  border-radius: 6px;
+  background: #242932;
+  color: #f5f5f5;
+  font-size: 14px;
+}
+
+.empty-state {
+  padding: 32px;
+  background: #1a1d23;
+  border-radius: 10px;
+  color: #aaa;
+}
+
 .kanban-board {
   display: flex;
   gap: 16px;
@@ -362,4 +412,95 @@
     grid-template-columns: 1fr;
     gap: 8px;
   }
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #111318;
+}
+
+.login-card {
+  width: min(400px, 100%);
+  padding: 28px;
+  border-radius: 12px;
+  background: white;
+  color: #222;
+}
+
+.login-card h1 {
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.login-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.login-card input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.login-card button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-error {
+  margin-bottom: 16px;
+  color: #c62828;
+}
+
+.user-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.user-toolbar > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-toolbar span {
+  font-size: 13px;
+  color: #aaa;
+}
+
+.permission-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #8b2f35;
+  border-radius: 8px;
+  background: #3a1d22;
+  color: #ffd9dc;
+}
+
+.permission-message button {
+  border: 1px solid #d58489;
+  border-radius: 5px;
+  padding: 5px 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
