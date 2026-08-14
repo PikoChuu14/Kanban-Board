@@ -10,6 +10,7 @@ import LoginPage from "./components/LoginPage";
 import PersonalKanban from "./pages/PersonalKanban";
 import StaffKanban from "./pages/StaffKanban";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import HistoryPage from "./pages/HistoryPage";
 import ReassignTaskModal from "./components/ReassignTaskModal";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
@@ -606,15 +607,15 @@ function App() {
         </button>
       </div>
 
-      {canViewProjectBoard && (
-        <div className="view-toolbar">
-          <button
-            type="button"
-            className={activeView === "personal" ? "active" : ""}
-            onClick={() => setActiveView("personal")}
-          >
-            My Kanban
-          </button>
+      <div className="view-toolbar">
+        <button
+          type="button"
+          className={activeView === "personal" ? "active" : ""}
+          onClick={() => setActiveView("personal")}
+        >
+          My Kanban
+        </button>
+        {canViewProjectBoard && <>
           <button
             type="button"
             className={activeView === "project" ? "active" : ""}
@@ -639,9 +640,15 @@ function App() {
           >
             Team
           </button>
-        </div>
-      )}
-
+        </>}
+        <button
+          type="button"
+          className={activeView === "history" ? "active" : ""}
+          onClick={() => setActiveView("history")}
+        >
+          History
+        </button>
+      </div>
       {permissionMessage && (
         <div className="permission-message" role="alert">
           {permissionMessage}
@@ -649,7 +656,9 @@ function App() {
         </div>
       )}
 
-      {activeView === "dashboard" ? (
+      {activeView === "history" ? (
+        <HistoryPage key={`${user?.userId}-${user?.role}`} user={user} users={users} departments={departments} />
+      ) : activeView === "dashboard" ? (
         <ManagerDashboard
           refreshKey={staffRefreshKey}
           onViewKanban={(staffId) => {
