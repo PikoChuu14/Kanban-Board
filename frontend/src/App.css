@@ -182,6 +182,41 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+.staff-task-card {
+  cursor: pointer;
+}
+
+.task-card--read-only {
+  cursor: pointer;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.review-actions button {
+  flex: 1;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-return-button {
+  border: 1px solid #c9a34e;
+  background: #fff8df;
+  color: #785b0b;
+}
+
+.review-approve-button {
+  border: 1px solid #4c9a68;
+  background: #eaf8ee;
+  color: #24613a;
+}
+
 .task-card:active {
   cursor: grabbing;
 }

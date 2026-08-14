@@ -4,6 +4,9 @@ import com.company.kanban.dto.CreateTaskRequest;
 import com.company.kanban.dto.MoveTaskRequest;
 import com.company.kanban.dto.TaskResponse;
 import com.company.kanban.dto.UpdateTaskRequest;
+import com.company.kanban.dto.UpdateTaskStatusRequest;
+import com.company.kanban.dto.ReviewAction;
+import com.company.kanban.dto.ReviewActionRequest;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Task;
 import com.company.kanban.entity.TaskStatus;
@@ -60,6 +63,19 @@ public class TaskService {
                 .findByAssigneeIdOrderByStatusAscPositionAsc(
                         currentUser.getId()
                 )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getTasksByUser(Long userId, User currentUser) {
+        User staffUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+        authorizationService.requireStaffViewerAccess(currentUser, staffUser);
+
+        return taskRepository.findByAssigneeIdOrderByStatusAscPositionAsc(userId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -175,7 +191,7 @@ public class TaskService {
                                 "Task not found"
                         )
                 );
-        authorizationService.requireTaskAccess(currentUser, task);
+        authorizationService.requireTaskOwnerMove(currentUser, task);
 
         KanbanColumn sourceColumn = task.getColumn();
 
@@ -244,6 +260,106 @@ public class TaskService {
 
             taskRepository.saveAll(sourceTasks);
         }
+
+        return toResponse(task);
+    }
+
+    @Transactional
+    public TaskResponse updateTaskStatus(
+            Long taskId,
+            UpdateTaskStatusRequest request,
+            User currentUser) {
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Task not found"));
+        authorizationService.requirePersonalStatusMove(
+                currentUser,
+                task,
+                request.status()
+        );
+
+        KanbanColumn sourceColumn = task.getColumn();
+        String targetColumnName = columnNameFromStatus(request.status());
+        KanbanColumn targetColumn = kanbanColumnRepository
+                .findByBoardIdAndName(
+                        sourceColumn.getBoard().getId(),
+                        targetColumnName
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Target status column is not configured for this board"
+                ));
+
+        List<Task> targetTasks = taskRepository
+                .findByColumnIdAndIdNotOrderByPositionAsc(
+                        targetColumn.getId(), taskId);
+        int targetPosition = Math.max(
+                1,
+                Math.min(request.targetPosition(), targetTasks.size() + 1)
+        );
+
+        task.setColumn(targetColumn);
+        task.setStatus(request.status());
+        targetTasks.add(targetPosition - 1, task);
+        normalizePositions(targetTasks);
+        taskRepository.saveAll(targetTasks);
+
+        if (!sourceColumn.getId().equals(targetColumn.getId())) {
+            List<Task> sourceTasks = taskRepository
+                    .findByColumnIdOrderByPositionAsc(sourceColumn.getId());
+            normalizePositions(sourceTasks);
+            taskRepository.saveAll(sourceTasks);
+        }
+
+        return toResponse(task);
+    }
+
+    @Transactional
+    public TaskResponse reviewAction(
+            Long taskId,
+            ReviewActionRequest request,
+            User currentUser) {
+
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Task not found"));
+        authorizationService.requireReviewActionAccess(currentUser, task);
+
+        if (task.getStatus() != TaskStatus.REVIEW) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Review actions are only available for tasks in REVIEW"
+            );
+        }
+
+        TaskStatus targetStatus = request.action() == ReviewAction.APPROVE
+                ? TaskStatus.DONE
+                : TaskStatus.DOING;
+        KanbanColumn sourceColumn = task.getColumn();
+        KanbanColumn targetColumn = kanbanColumnRepository
+                .findByBoardIdAndName(
+                        sourceColumn.getBoard().getId(),
+                        columnNameFromStatus(targetStatus)
+                )
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Target status column is not configured for this board"
+                ));
+
+        List<Task> targetTasks = taskRepository
+                .findByColumnIdAndIdNotOrderByPositionAsc(
+                        targetColumn.getId(), taskId);
+        task.setColumn(targetColumn);
+        task.setStatus(targetStatus);
+        targetTasks.add(task);
+        normalizePositions(targetTasks);
+        taskRepository.saveAll(targetTasks);
+
+        List<Task> sourceTasks = taskRepository
+                .findByColumnIdOrderByPositionAsc(sourceColumn.getId());
+        normalizePositions(sourceTasks);
+        taskRepository.saveAll(sourceTasks);
 
         return toResponse(task);
     }
@@ -320,5 +436,20 @@ public class TaskService {
                     "Unsupported Kanban column"
             );
         };
+    }
+
+    private String columnNameFromStatus(TaskStatus status) {
+        return switch (status) {
+            case DRAFT -> "To Do";
+            case DOING -> "In Progress";
+            case REVIEW -> "Review";
+            case DONE -> "Done";
+        };
+    }
+
+    private void normalizePositions(List<Task> tasks) {
+        for (int i = 0; i < tasks.size(); i++) {
+            tasks.get(i).setPosition(i + 1);
+        }
     }
 }

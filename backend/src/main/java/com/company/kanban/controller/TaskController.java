@@ -4,6 +4,8 @@ import com.company.kanban.dto.CreateTaskRequest;
 import com.company.kanban.dto.MoveTaskRequest;
 import com.company.kanban.dto.TaskResponse;
 import com.company.kanban.dto.UpdateTaskRequest;
+import com.company.kanban.dto.UpdateTaskStatusRequest;
+import com.company.kanban.dto.ReviewActionRequest;
 import com.company.kanban.service.TaskService;
 import com.company.kanban.entity.User;
 import jakarta.validation.Valid;
@@ -38,6 +40,14 @@ public class TaskController {
         return taskService.getMyTasks(currentUser);
     }
 
+    @GetMapping("/user/{userId}")
+    public List<TaskResponse> getTasksByUser(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal User currentUser) {
+
+        return taskService.getTasksByUser(userId, currentUser);
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public TaskResponse createTask(
@@ -55,6 +65,24 @@ public class TaskController {
             @AuthenticationPrincipal User currentUser) {
 
         return taskService.moveTask(taskId, request, currentUser);
+    }
+
+    @PutMapping("/{taskId}/status")
+    public TaskResponse updateTaskStatus(
+            @PathVariable Long taskId,
+            @Valid @RequestBody UpdateTaskStatusRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        return taskService.updateTaskStatus(taskId, request, currentUser);
+    }
+
+    @PutMapping("/{taskId}/review-action")
+    public TaskResponse reviewAction(
+            @PathVariable Long taskId,
+            @Valid @RequestBody ReviewActionRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        return taskService.reviewAction(taskId, request, currentUser);
     }
 
     @PutMapping("/{taskId}")

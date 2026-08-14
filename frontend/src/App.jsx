@@ -8,6 +8,7 @@ import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
 import PersonalKanban from "./pages/PersonalKanban";
+import StaffKanban from "./pages/StaffKanban";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -44,6 +45,8 @@ function App() {
   const canDeleteTask = isAdmin || isManager;
   const canViewProjectBoard = isAdmin || isManager;
   const [activeView, setActiveView] = useState("personal");
+  const [selectedStaffId, setSelectedStaffId] = useState("");
+  const [staffRefreshKey, setStaffRefreshKey] = useState(0);
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -70,6 +73,9 @@ function App() {
   const pointerDownRef = useRef(null);
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
+  const selectedStaff = users.find(
+    (candidate) => candidate.id === Number(selectedStaffId)
+  ) ?? null;
 
   const loadBoard = useCallback(async (boardId) => {
     try {
@@ -206,7 +212,7 @@ function App() {
 
     setColumns([]);
     setTasksByColumn({});
-  }, [selectedBoardId, loadBoard]);
+  }, [activeView, selectedBoardId, loadBoard]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -304,6 +310,7 @@ function App() {
     const rect = card.getBoundingClientRect();
     pointerDownRef.current = {
       task,
+      canDrag: task.assigneeId === user?.userId,
       startX: event.clientX,
       startY: event.clientY,
       offsetX: event.clientX - rect.left,
@@ -339,7 +346,7 @@ function App() {
       const pointerDown = pointerDownRef.current;
       const task = draggedTaskRef.current;
 
-      if (!pointerDown) {
+      if (!pointerDown || !pointerDown.canDrag) {
         return;
       }
 
@@ -611,6 +618,13 @@ function App() {
           >
             Project Board
           </button>
+          <button
+            type="button"
+            className={activeView === "staff" ? "active" : ""}
+            onClick={() => setActiveView("staff")}
+          >
+            Staff Kanban
+          </button>
         </div>
       )}
 
@@ -622,7 +636,32 @@ function App() {
       )}
 
       {activeView === "personal" ? (
-        <PersonalKanban />
+        <PersonalKanban user={user} />
+      ) : activeView === "staff" ? (
+        <>
+          <div className="board-toolbar staff-selector-toolbar">
+            <div className="toolbar-field">
+              <label htmlFor="staff-select">Staff member</label>
+              <select
+                id="staff-select"
+                value={selectedStaffId}
+                onChange={(event) => setSelectedStaffId(event.target.value)}
+              >
+                <option value="">Select staff member</option>
+                {users.filter((candidate) => candidate.role === "STAFF").map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.name || candidate.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <StaffKanban
+            staffUser={selectedStaff}
+            refreshKey={staffRefreshKey}
+            onTaskSelected={setSelectedTask}
+          />
+        </>
       ) : (
         <>
       <h1>
@@ -748,6 +787,8 @@ function App() {
                     <div
                       className={`task-card ${
                         draggedTask?.id === task.id ? "task-card--dragging" : ""
+                      } ${
+                        task.assigneeId === user?.userId ? "" : "task-card--read-only"
                       }`}
                       data-column-id={column.id}
                       data-task-id={task.id}
@@ -824,9 +865,12 @@ function App() {
         users={users}
         canDelete={canDeleteTask}
         onClose={() => setSelectedTask(null)}
-        onTaskUpdated={() =>
-          selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
-        }
+        onTaskUpdated={async () => {
+          if (selectedBoardId !== null) {
+            await loadBoard(selectedBoardId);
+          }
+          setStaffRefreshKey((currentKey) => currentKey + 1);
+        }}
         onDelete={requestDeleteTask}
       />
 

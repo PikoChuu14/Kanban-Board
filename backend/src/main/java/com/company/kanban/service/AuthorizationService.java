@@ -55,6 +55,63 @@ public class AuthorizationService {
         requireColumnAccess(user, task.getColumn());
     }
 
+    public void requireTaskOwnerMove(User user, Task task) {
+        requireTaskAccess(user, task);
+
+        if (user == null || task.getAssignee() == null
+                || !Objects.equals(user.getId(), task.getAssignee().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You can only move tasks assigned to yourself"
+            );
+        }
+    }
+
+    public void requirePersonalTaskAccess(User user, Task task) {
+        if (user == null || task.getAssignee() == null
+                || !Objects.equals(user.getId(), task.getAssignee().getId())) {
+            throw forbidden();
+        }
+    }
+
+    public void requirePersonalStatusMove(User user, Task task, com.company.kanban.entity.TaskStatus targetStatus) {
+        requirePersonalTaskAccess(user, task);
+
+        if (user.getRole() == Role.STAFF
+                && targetStatus == com.company.kanban.entity.TaskStatus.DONE) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Staff tasks must be approved by a manager before completion"
+            );
+        }
+    }
+
+    public void requireStaffViewerAccess(User currentUser, User staffUser) {
+        if (isAdmin(currentUser)) {
+            return;
+        }
+
+        if (currentUser == null || currentUser.getRole() != Role.MANAGER
+                || currentUser.getDepartment() == null
+                || staffUser == null || staffUser.getDepartment() == null
+                || !Objects.equals(currentUser.getDepartment().getId(),
+                staffUser.getDepartment().getId())) {
+            throw forbidden();
+        }
+    }
+
+    public void requireReviewActionAccess(User currentUser, Task task) {
+        if (isAdmin(currentUser)) {
+            return;
+        }
+
+        if (currentUser == null || currentUser.getRole() != Role.MANAGER) {
+            throw forbidden();
+        }
+
+        requireTaskAccess(currentUser, task);
+    }
+
     public void requireAssignableUser(User currentUser, User assignee) {
         if (isAdmin(currentUser)) {
             return;
