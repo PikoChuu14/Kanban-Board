@@ -4,6 +4,7 @@ import com.company.kanban.entity.Task;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 public interface TaskRepository
         extends JpaRepository<Task, Long> {
@@ -20,4 +21,17 @@ public interface TaskRepository
     int countByColumnId(Long columnId);
 
     boolean existsByColumnBoardId(Long boardId);
+
+    @org.springframework.data.jpa.repository.Query("""
+            select distinct t from Task t
+            join fetch t.column c
+            join fetch c.board b
+            join fetch b.department d
+            left join fetch t.assignee a
+            left join fetch t.createdBy cb
+            where t.status <> com.company.kanban.entity.TaskStatus.DONE
+               or (t.updatedAt >= :from and t.updatedAt < :to)
+            order by t.id
+            """)
+    List<Task> findRelevantForSnapshot(LocalDateTime from, LocalDateTime to);
 }
