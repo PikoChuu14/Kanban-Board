@@ -10,6 +10,8 @@ import LoginPage from "./components/LoginPage";
 import PersonalKanban from "./pages/PersonalKanban";
 import StaffKanban from "./pages/StaffKanban";
 import ManagerDashboard from "./pages/ManagerDashboard";
+import StaffDashboard from "./pages/StaffDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import HistoryPage from "./pages/HistoryPage";
 import ReassignTaskModal from "./components/ReassignTaskModal";
 import { apiFetch } from "./api/apiFetch";
@@ -47,7 +49,7 @@ function App() {
   const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
   const canViewProjectBoard = isAdmin || isManager;
-  const [activeView, setActiveView] = useState("personal");
+  const [activeView, setActiveView] = useState("dashboard");
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [staffRefreshKey, setStaffRefreshKey] = useState(0);
   const [departments, setDepartments] = useState([]);
@@ -126,7 +128,7 @@ function App() {
       return;
     }
 
-    setActiveView(user.role === "STAFF" ? "personal" : "dashboard");
+    setActiveView("dashboard");
   }, [isAuthenticated, user]);
 
   useEffect(() => {
@@ -610,6 +612,16 @@ function App() {
       <div className="view-toolbar">
         <button
           type="button"
+          className={activeView === "dashboard" ? "active" : ""}
+          onClick={() => {
+            setStaffRefreshKey((currentKey) => currentKey + 1);
+            setActiveView("dashboard");
+          }}
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
           className={activeView === "personal" ? "active" : ""}
           onClick={() => setActiveView("personal")}
         >
@@ -622,16 +634,6 @@ function App() {
             onClick={() => setActiveView("project")}
           >
             Projects
-          </button>
-          <button
-            type="button"
-            className={activeView === "dashboard" ? "active" : ""}
-            onClick={() => {
-              setStaffRefreshKey((currentKey) => currentKey + 1);
-              setActiveView("dashboard");
-            }}
-          >
-            Dashboard
           </button>
           <button
             type="button"
@@ -659,13 +661,40 @@ function App() {
       {activeView === "history" ? (
         <HistoryPage key={`${user?.userId}-${user?.role}`} user={user} users={users} departments={departments} />
       ) : activeView === "dashboard" ? (
-        <ManagerDashboard
-          refreshKey={staffRefreshKey}
-          onViewKanban={(staffId) => {
-            setSelectedStaffId(String(staffId));
-            setActiveView("staff");
-          }}
-        />
+        user?.role === "STAFF" ? (
+          <StaffDashboard user={user} refreshKey={staffRefreshKey} onOpenKanban={() => setActiveView("personal")} />
+        ) : user?.role === "ADMIN" ? (
+          <AdminDashboard
+            departments={departments}
+            refreshKey={staffRefreshKey}
+            onOpenHistory={() => setActiveView("history")}
+            onViewDepartment={(departmentId) => {
+              setSelectedDepartmentId(departmentId);
+              setSelectedStaffId("");
+              setActiveView("staff");
+            }}
+            onViewProject={(board) => {
+              setSelectedDepartmentId(board.departmentId);
+              setSelectedBoardId(board.id);
+              setActiveView("project");
+            }}
+          />
+        ) : (
+          <ManagerDashboard
+            user={user}
+            refreshKey={staffRefreshKey}
+            onOpenKanban={() => setActiveView("personal")}
+            onViewKanban={(staffId) => {
+              setSelectedStaffId(String(staffId));
+              setActiveView("staff");
+            }}
+            onViewProject={(board) => {
+              setSelectedDepartmentId(board.departmentId);
+              setSelectedBoardId(board.id);
+              setActiveView("project");
+            }}
+          />
+        )
       ) : activeView === "personal" ? (
         <PersonalKanban user={user} />
       ) : activeView === "staff" ? (
