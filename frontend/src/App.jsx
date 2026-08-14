@@ -7,6 +7,7 @@ import ConfirmDeleteBoardModal from "./components/ConfirmDeleteBoardModal";
 import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
+import AppShell from "./components/AppShell";
 import PersonalKanban from "./pages/PersonalKanban";
 import StaffKanban from "./pages/StaffKanban";
 import ManagerDashboard from "./pages/ManagerDashboard";
@@ -592,65 +593,16 @@ function App() {
   }
 
   return (
+    <AppShell
+      user={user}
+      activeView={activeView}
+      onNavigate={(view) => {
+        if (view === "dashboard") setStaffRefreshKey((currentKey) => currentKey + 1);
+        setActiveView(view);
+      }}
+      onLogout={logout}
+    >
     <div className="app">
-      <div className="user-toolbar">
-        <div>
-          <strong>{user?.name}</strong>
-
-          <span>
-            {user?.departmentName}
-            {" \u00b7 "}
-            {user?.role}
-          </span>
-        </div>
-
-        <button type="button" onClick={logout}>
-          Logout
-        </button>
-      </div>
-
-      <div className="view-toolbar">
-        <button
-          type="button"
-          className={activeView === "dashboard" ? "active" : ""}
-          onClick={() => {
-            setStaffRefreshKey((currentKey) => currentKey + 1);
-            setActiveView("dashboard");
-          }}
-        >
-          Dashboard
-        </button>
-        <button
-          type="button"
-          className={activeView === "personal" ? "active" : ""}
-          onClick={() => setActiveView("personal")}
-        >
-          My Kanban
-        </button>
-        {canViewProjectBoard && <>
-          <button
-            type="button"
-            className={activeView === "project" ? "active" : ""}
-            onClick={() => setActiveView("project")}
-          >
-            Projects
-          </button>
-          <button
-            type="button"
-            className={activeView === "staff" ? "active" : ""}
-            onClick={() => setActiveView("staff")}
-          >
-            Team
-          </button>
-        </>}
-        <button
-          type="button"
-          className={activeView === "history" ? "active" : ""}
-          onClick={() => setActiveView("history")}
-        >
-          History
-        </button>
-      </div>
       {permissionMessage && (
         <div className="permission-message" role="alert">
           {permissionMessage}
@@ -665,6 +617,7 @@ function App() {
           <StaffDashboard user={user} refreshKey={staffRefreshKey} onOpenKanban={() => setActiveView("personal")} />
         ) : user?.role === "ADMIN" ? (
           <AdminDashboard
+            user={user}
             departments={departments}
             refreshKey={staffRefreshKey}
             onOpenHistory={() => setActiveView("history")}
@@ -968,6 +921,7 @@ function App() {
         onConfirm={confirmDeleteBoard}
       />
     </div>
+    </AppShell>
   );
 }
 

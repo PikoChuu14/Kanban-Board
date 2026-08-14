@@ -11,6 +11,12 @@ export function malaysiaToday() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
 }
 
+export function timeGreeting(name) {
+  const hour = new Date().getHours();
+  const period = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  return `Good ${period}, ${name || "there"}`;
+}
+
 export function taskIsActive(task) {
   return task.status !== "DONE";
 }

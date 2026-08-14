@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
-import { activeTasks, activeWorkload, countStatus, dueLabel, formatDueDate, getJson, malaysiaToday } from "./dashboardUtils";
+import { activeTasks, activeWorkload, countStatus, dueLabel, formatDueDate, getJson, malaysiaToday, timeGreeting } from "./dashboardUtils";
 
 function StaffDashboard({ user, refreshKey, onOpenKanban }) {
   const [tasks, setTasks] = useState([]);
@@ -43,7 +43,7 @@ function StaffDashboard({ user, refreshKey, onOpenKanban }) {
   const statusCount = (status) => countStatus(tasks, status);
 
   return <section className="dashboard-page">
-    <div className="dashboard-hero"><div><p className="eyebrow">Personal dashboard</p><h1>Good {new Date().getHours() < 12 ? "morning" : "afternoon"}, {user.name}</h1><p>{user.departmentName} · {user.role}</p></div><button className="primary-button" onClick={onOpenKanban}>Open My Kanban</button></div>
+    <div className="dashboard-hero"><div><h1 className="personal-greeting">{timeGreeting(user.name)}</h1><p className="greeting-subtitle">Here's what's happening with your work today.</p><p className="eyebrow">Personal dashboard</p><h2>My work today</h2></div><button className="primary-button" onClick={onOpenKanban}>Open My Kanban</button></div>
     <div className="kpi-grid">
       <Kpi label="Active workload" value={activeWorkload(tasks)} detail="Draft, Doing and Review" />
       <Kpi label="Doing" value={statusCount("DOING")} detail="In progress now" />
