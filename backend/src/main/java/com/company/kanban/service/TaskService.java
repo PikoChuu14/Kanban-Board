@@ -7,6 +7,7 @@ import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.dto.UpdateTaskStatusRequest;
 import com.company.kanban.dto.ReviewAction;
 import com.company.kanban.dto.ReviewActionRequest;
+import com.company.kanban.dto.ReassignTaskRequest;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Task;
 import com.company.kanban.entity.TaskStatus;
@@ -362,6 +363,18 @@ public class TaskService {
         taskRepository.saveAll(sourceTasks);
 
         return toResponse(task);
+    }
+
+    @Transactional
+    public TaskResponse reassignTask(Long taskId, ReassignTaskRequest request, User currentUser) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));
+        User assignee = userRepository.findById(request.assigneeId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assignee not found"));
+
+        authorizationService.requireTaskReassignmentAccess(currentUser, task, assignee);
+        task.setAssignee(assignee);
+        return toResponse(taskRepository.save(task));
     }
 
     @Transactional

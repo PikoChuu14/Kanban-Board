@@ -100,6 +100,14 @@ public class AuthorizationService {
         }
     }
 
+    public void requireWorkloadDashboardAccess(User currentUser) {
+        if (currentUser == null
+                || (currentUser.getRole() != Role.ADMIN
+                && currentUser.getRole() != Role.MANAGER)) {
+            throw forbidden();
+        }
+    }
+
     public void requireReviewActionAccess(User currentUser, Task task) {
         if (isAdmin(currentUser)) {
             return;
@@ -126,6 +134,25 @@ public class AuthorizationService {
 
             throw forbidden();
         }
+    }
+
+    public void requireTaskReassignmentAccess(User currentUser, Task task, User assignee) {
+        if (currentUser == null
+                || (currentUser.getRole() != Role.ADMIN && currentUser.getRole() != Role.MANAGER)) {
+            throw forbidden();
+        }
+
+        requireTaskAccess(currentUser, task);
+        requireAssignableUser(currentUser, assignee);
+
+        if (assignee.getRole() != Role.STAFF) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Tasks can only be reassigned to staff"
+            );
+        }
+
+        requireAssigneeMatchesTaskDepartment(assignee, task.getColumn().getBoard().getDepartment());
     }
 
     public void requireAssigneeMatchesTaskDepartment(

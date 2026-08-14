@@ -9,7 +9,7 @@ const STATUSES = [
   { value: "DONE", label: "Done" },
 ];
 
-function StaffKanban({ staffUser, refreshKey, onTaskSelected }) {
+function StaffKanban({ staffUser, refreshKey, onTaskSelected, onTaskChanged, onReassignTask }) {
   const [tasks, setTasks] = useState([]);
   const [error, setError] = useState("");
 
@@ -55,6 +55,7 @@ function StaffKanban({ staffUser, refreshKey, onTaskSelected }) {
       setTasks((currentTasks) => currentTasks.map((candidate) =>
         candidate.id === updatedTask.id ? updatedTask : candidate
       ));
+      onTaskChanged?.();
     } catch (actionError) {
       console.error("Failed to apply review action:", actionError);
       setError("Unable to update the task review state.");
@@ -123,8 +124,21 @@ function StaffKanban({ staffUser, refreshKey, onTaskSelected }) {
                           </button>
                         </div>
                       )}
+                      <button
+                        type="button"
+                        className="reassign-button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onReassignTask(task);
+                        }}
+                      >
+                        Reassign
+                      </button>
                     </div>
                   ))}
+                {tasks.filter((task) => task.status === status.value).length === 0 && (
+                  <p className="column-empty">No tasks assigned.</p>
+                )}
               </div>
             </div>
           ))}

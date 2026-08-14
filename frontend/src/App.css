@@ -186,6 +186,20 @@
   cursor: pointer;
 }
 
+.current-assignee {
+  padding: 10px 11px;
+  border: 1px solid #cfd5df;
+  border-radius: 6px;
+  background: #f5f6f8;
+  color: #374151;
+}
+
+.column-empty {
+  margin: 8px 0;
+  color: #8a8f98;
+  font-size: 13px;
+}
+
 .task-card--read-only {
   cursor: pointer;
 }
@@ -215,6 +229,19 @@
   border: 1px solid #4c9a68;
   background: #eaf8ee;
   color: #24613a;
+}
+
+.reassign-button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 8px;
+  border: 1px solid #426fbd;
+  border-radius: 6px;
+  background: #eef4ff;
+  color: #2456a6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .task-card:active {
@@ -573,5 +600,108 @@
   padding: 5px 9px;
   background: transparent;
   color: inherit;
+  cursor: pointer;
+}
+
+.workload-dashboard {
+  max-width: 1180px;
+}
+
+.dashboard-heading {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.dashboard-heading h1 {
+  margin: 0 0 8px;
+}
+
+.dashboard-heading p,
+.workload-card-header p {
+  margin: 0;
+  color: #aeb6c4;
+}
+
+.dashboard-status {
+  color: #aeb6c4;
+}
+
+.workload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.workload-card {
+  padding: 20px;
+  border: 1px solid #303641;
+  border-radius: 12px;
+  background: #1a1e25;
+}
+
+.workload-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workload-card h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.workload-total {
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+}
+
+.workload-total strong {
+  font-size: 30px;
+  color: #8ab4ff;
+}
+
+.workload-total span {
+  font-size: 11px;
+  color: #aeb6c4;
+  text-transform: uppercase;
+}
+
+.workload-bar {
+  height: 8px;
+  margin: 20px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #303641;
+}
+
+.workload-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #4f8cff;
+}
+
+.workload-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+  color: #aeb6c4;
+  font-size: 13px;
+}
+
+.workload-summary strong {
+  color: #f5f5f5;
+}
+
+.workload-view-button {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #426fbd;
+  border-radius: 6px;
+  background: #2456a6;
+  color: #fff;
   cursor: pointer;
 }

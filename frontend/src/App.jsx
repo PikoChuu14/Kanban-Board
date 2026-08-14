@@ -9,6 +9,8 @@ import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
 import PersonalKanban from "./pages/PersonalKanban";
 import StaffKanban from "./pages/StaffKanban";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import ReassignTaskModal from "./components/ReassignTaskModal";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -62,6 +64,7 @@ function App() {
   const [users, setUsers] = useState([]);
   const [selectedColumn, setSelectedColumn] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskToReassign, setTaskToReassign] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [deletingTask, setDeletingTask] = useState(false);
   const [draggedTask, setDraggedTask] = useState(null);
@@ -122,7 +125,7 @@ function App() {
       return;
     }
 
-    setActiveView(user.role === "ADMIN" ? "project" : "personal");
+    setActiveView(user.role === "STAFF" ? "personal" : "dashboard");
   }, [isAuthenticated, user]);
 
   useEffect(() => {
@@ -565,6 +568,7 @@ function App() {
       }
 
       setTaskToDelete(null);
+      setStaffRefreshKey((currentKey) => currentKey + 1);
 
       if (selectedBoardId !== null) {
         await loadBoard(selectedBoardId);
@@ -609,21 +613,31 @@ function App() {
             className={activeView === "personal" ? "active" : ""}
             onClick={() => setActiveView("personal")}
           >
-            My Work
+            My Kanban
           </button>
           <button
             type="button"
             className={activeView === "project" ? "active" : ""}
             onClick={() => setActiveView("project")}
           >
-            Project Board
+            Projects
+          </button>
+          <button
+            type="button"
+            className={activeView === "dashboard" ? "active" : ""}
+            onClick={() => {
+              setStaffRefreshKey((currentKey) => currentKey + 1);
+              setActiveView("dashboard");
+            }}
+          >
+            Dashboard
           </button>
           <button
             type="button"
             className={activeView === "staff" ? "active" : ""}
             onClick={() => setActiveView("staff")}
           >
-            Staff Kanban
+            Team
           </button>
         </div>
       )}
@@ -635,7 +649,15 @@ function App() {
         </div>
       )}
 
-      {activeView === "personal" ? (
+      {activeView === "dashboard" ? (
+        <ManagerDashboard
+          refreshKey={staffRefreshKey}
+          onViewKanban={(staffId) => {
+            setSelectedStaffId(String(staffId));
+            setActiveView("staff");
+          }}
+        />
+      ) : activeView === "personal" ? (
         <PersonalKanban user={user} />
       ) : activeView === "staff" ? (
         <>
@@ -660,6 +682,8 @@ function App() {
             staffUser={selectedStaff}
             refreshKey={staffRefreshKey}
             onTaskSelected={setSelectedTask}
+            onTaskChanged={() => setStaffRefreshKey((currentKey) => currentKey + 1)}
+            onReassignTask={setTaskToReassign}
           />
         </>
       ) : (
@@ -838,9 +862,12 @@ function App() {
           column={selectedColumn}
           users={users}
           onClose={closeCreateTaskModal}
-          onCreated={() =>
-            selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
-          }
+          onCreated={async () => {
+            setStaffRefreshKey((currentKey) => currentKey + 1);
+            if (selectedBoardId !== null) {
+              await loadBoard(selectedBoardId);
+            }
+          }}
         />
       )}
 
@@ -872,6 +899,20 @@ function App() {
           setStaffRefreshKey((currentKey) => currentKey + 1);
         }}
         onDelete={requestDeleteTask}
+      />
+
+      <ReassignTaskModal
+        task={taskToReassign}
+        users={users}
+        onClose={() => setTaskToReassign(null)}
+        onReassigned={async (updatedTask) => {
+          setTaskToReassign(null);
+          setStaffRefreshKey((currentKey) => currentKey + 1);
+          if (selectedBoardId !== null) {
+            await loadBoard(selectedBoardId);
+          }
+          return updatedTask;
+        }}
       />
 
       <ConfirmDeleteModal

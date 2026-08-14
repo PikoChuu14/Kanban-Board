@@ -6,6 +6,7 @@ import com.company.kanban.dto.TaskResponse;
 import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.dto.UpdateTaskStatusRequest;
 import com.company.kanban.dto.ReviewActionRequest;
+import com.company.kanban.dto.ReassignTaskRequest;
 import com.company.kanban.service.TaskService;
 import com.company.kanban.entity.User;
 import jakarta.validation.Valid;
@@ -83,6 +84,14 @@ public class TaskController {
             @AuthenticationPrincipal User currentUser) {
 
         return taskService.reviewAction(taskId, request, currentUser);
+    }
+
+    @PutMapping("/{taskId}/assignee")
+    public TaskResponse reassignTask(
+            @PathVariable Long taskId,
+            @Valid @RequestBody ReassignTaskRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return taskService.reassignTask(taskId, request, currentUser);
     }
 
     @PutMapping("/{taskId}")
