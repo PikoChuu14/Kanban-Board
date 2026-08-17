@@ -18,6 +18,8 @@ public interface TaskRepository
 
     List<Task> findByAssigneeIdOrderByStatusAscPositionAsc(Long assigneeId);
 
+    List<Task> findByStatusOrderBySubmittedForReviewAtAsc(com.company.kanban.entity.TaskStatus status);
+
     int countByColumnId(Long columnId);
 
     boolean existsByColumnBoardId(Long boardId);

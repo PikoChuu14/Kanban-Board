@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 import { activeTasks, activeWorkload, countStatus, dueLabel, formatDueDate, getJson, malaysiaToday, timeGreeting } from "./dashboardUtils";
 
-function StaffDashboard({ user, refreshKey, onOpenKanban }) {
+function StaffDashboard({ user, refreshKey, onOpenKanban, onOpenReport }) {
   const [tasks, setTasks] = useState([]);
   const [snapshot, setSnapshot] = useState(null);
   const [state, setState] = useState("loading");
@@ -51,6 +51,7 @@ function StaffDashboard({ user, refreshKey, onOpenKanban }) {
       <Kpi label="Due soon / overdue" value={active.filter((task) => dueLabel(task)).length} detail="Next 3 days" tone={active.some((task) => dueLabel(task)) ? "warning" : ""} />
     </div>
     <div className="dashboard-columns">
+      <DashboardPanel title="Today's Report" action={<button className="text-button" onClick={onOpenReport}>Open</button>}><ReportCard onOpen={onOpenReport} /></DashboardPanel>
       <DashboardPanel title="My current work" action={<button className="text-button" onClick={onOpenKanban}>View all</button>}>
         {current.length ? <TaskList tasks={current} /> : <Empty text="No active tasks." />}
       </DashboardPanel>
@@ -63,6 +64,7 @@ function StaffDashboard({ user, refreshKey, onOpenKanban }) {
     </DashboardPanel>
   </section>;
 }
+function ReportCard({onOpen}) { const [status,setStatus]=useState("loading"); useEffect(()=>{apiFetch("http://localhost:8080/api/daily-reports/today").then(r=>r.ok?r.json():null).then(d=>setStatus(d?.report?.reportStatus||"NOT_STARTED")).catch(()=>setStatus("NOT_STARTED"));},[]); return <div className="daily-report-card"><span className={`report-status ${status.toLowerCase()}`}>{status === "NOT_STARTED" ? "Not started" : status === "DRAFT" ? "Draft" : "Submitted"}</span><p>{status === "NOT_STARTED" ? "Capture a short update for today's work." : status === "DRAFT" ? "Your draft is ready to continue." : "Your report is ready to view."}</p><button className="primary-button" onClick={onOpen}>{status === "NOT_STARTED" ? "Write Report" : status === "DRAFT" ? "Continue Report" : "View Report"}</button></div>; }
 
 function Kpi({ label, value, detail, tone = "" }) { return <div className={`kpi-card ${tone}`}><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>; }
 function DashboardPanel({ title, action, children, className = "" }) { return <section className={`dashboard-panel ${className}`}><div className="panel-heading"><h2>{title}</h2>{action}</div>{children}</section>; }

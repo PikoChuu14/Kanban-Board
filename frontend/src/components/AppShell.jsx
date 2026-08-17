@@ -5,7 +5,8 @@ const icons = {
   kanban: <><rect x="3" y="4" width="5" height="16" rx="1" /><rect x="10" y="4" width="5" height="10" rx="1" /><rect x="17" y="4" width="4" height="13" rx="1" /></>,
   team: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M3.5 19c.5-3 2.4-4.5 5.5-4.5s5 1.5 5.5 4.5M14 14.8c3.8-.9 6 .7 6.5 3.7" /></>,
   projects: <><path d="M3 7.5h7l2 2h9v9.5H3z" /><path d="M3 7.5V5h6l2 2.5" /></>,
-  history: <><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5" /><path d="M4 4v4.5h4.5M12 7v5l3 2" /></>,
+  reviews: <><path d="M5 5h14v14H5z" /><path d="m8 12 2.5 2.5L16 9" /></>,
+  report: <><path d="M6 3h9l3 3v15H6z" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   chevron: <path d="m9 6 6 6-6 6" />,
 };
@@ -21,8 +22,8 @@ function AppShell({ user, activeView, onNavigate, onLogout, children }) {
   const items = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard" },
     { id: "personal", label: "My Kanban", icon: "kanban" },
-    ...(canSeeTeam ? [{ id: "project", label: "Projects", icon: "projects" }, { id: "staff", label: "Team", icon: "team" }] : []),
-    { id: "history", label: "History", icon: "history" },
+    ...(canSeeTeam ? [{ id: "project", label: "Projects", icon: "projects" }, { id: "staff", label: "Team", icon: "team" }, { id: "reviews", label: "Reviews", icon: "reviews" }] : []),
+    { id: "report", label: user?.role === "STAFF" ? "Daily Report" : "Daily Reports", icon: "report" },
   ];
 
   useEffect(() => {

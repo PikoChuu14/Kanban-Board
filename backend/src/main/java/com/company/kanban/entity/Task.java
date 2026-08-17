@@ -51,6 +51,8 @@ public class Task {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    private LocalDateTime submittedForReviewAt;
+
     public Task() {
     }
 
@@ -134,6 +136,9 @@ public class Task {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    public LocalDateTime getSubmittedForReviewAt() { return submittedForReviewAt; }
+    public void setSubmittedForReviewAt(LocalDateTime value) { this.submittedForReviewAt = value; }
 
     public void setTitle(String title) {
         this.title = title;

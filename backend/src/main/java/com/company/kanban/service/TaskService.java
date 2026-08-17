@@ -8,6 +8,7 @@ import com.company.kanban.dto.UpdateTaskStatusRequest;
 import com.company.kanban.dto.ReviewAction;
 import com.company.kanban.dto.ReviewActionRequest;
 import com.company.kanban.dto.ReassignTaskRequest;
+import com.company.kanban.dto.ReviewQueueItem;
 import com.company.kanban.entity.KanbanColumn;
 import com.company.kanban.entity.Task;
 import com.company.kanban.entity.TaskStatus;
@@ -234,6 +235,8 @@ public class TaskService {
 
         task.setColumn(targetColumn);
         task.setStatus(statusFromColumn(targetColumn));
+        if (task.getStatus() == TaskStatus.REVIEW) task.setSubmittedForReviewAt(java.time.LocalDateTime.now());
+        else task.setSubmittedForReviewAt(null);
 
         targetTasks.add(
                 targetPosition - 1,
@@ -302,6 +305,8 @@ public class TaskService {
 
         task.setColumn(targetColumn);
         task.setStatus(request.status());
+        if (request.status() == TaskStatus.REVIEW) task.setSubmittedForReviewAt(java.time.LocalDateTime.now());
+        if (request.status() != TaskStatus.REVIEW) task.setSubmittedForReviewAt(null);
         targetTasks.add(targetPosition - 1, task);
         normalizePositions(targetTasks);
         taskRepository.saveAll(targetTasks);
@@ -353,6 +358,7 @@ public class TaskService {
                         targetColumn.getId(), taskId);
         task.setColumn(targetColumn);
         task.setStatus(targetStatus);
+        if (request.action() == ReviewAction.RETURN) task.setSubmittedForReviewAt(null);
         targetTasks.add(task);
         normalizePositions(targetTasks);
         taskRepository.saveAll(targetTasks);
@@ -363,6 +369,19 @@ public class TaskService {
         taskRepository.saveAll(sourceTasks);
 
         return toResponse(task);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewQueueItem> reviewQueue(User currentUser) {
+        authorizationService.requireWorkloadDashboardAccess(currentUser);
+        return taskRepository.findByStatusOrderBySubmittedForReviewAtAsc(TaskStatus.REVIEW).stream()
+                .filter(task -> authorizationService.canAccessDepartment(currentUser, task.getColumn().getBoard().getDepartment().getId()))
+                .map(task -> new ReviewQueueItem(task.getId(), task.getTitle(), task.getDescription(), task.getWorkload(), task.getPriority(),
+                        task.getDueDate(), task.getAssignee() == null ? null : task.getAssignee().getId(),
+                        task.getAssignee() == null ? null : task.getAssignee().getName(), task.getColumn().getBoard().getId(),
+                        task.getColumn().getBoard().getName(), task.getColumn().getBoard().getDepartment().getId(),
+                        task.getColumn().getBoard().getDepartment().getName(), task.getSubmittedForReviewAt(), task.getUpdatedAt()))
+                .toList();
     }
 
     @Transactional

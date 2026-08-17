@@ -13,8 +13,11 @@ import StaffKanban from "./pages/StaffKanban";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import ReviewQueuePage from "./pages/ReviewQueuePage";
 import HistoryPage from "./pages/HistoryPage";
 import ReassignTaskModal from "./components/ReassignTaskModal";
+import DailyReportPage from "./pages/DailyReportPage";
+import TeamDailyReportsPage from "./pages/TeamDailyReportsPage";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -53,6 +56,8 @@ function App() {
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [staffRefreshKey, setStaffRefreshKey] = useState(0);
+  const [selectedReportUserId, setSelectedReportUserId] = useState(null);
+  const [selectedReportDate, setSelectedReportDate] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
@@ -598,6 +603,7 @@ function App() {
       activeView={activeView}
       onNavigate={(view) => {
         if (view === "dashboard") setStaffRefreshKey((currentKey) => currentKey + 1);
+        if (view === "report") { setSelectedReportUserId(null); setSelectedReportDate(null); }
         setActiveView(view);
       }}
       onLogout={logout}
@@ -610,17 +616,26 @@ function App() {
         </div>
       )}
 
-      {activeView === "history" ? (
+      {activeView === "reviews" ? (
+        <ReviewQueuePage onRefresh={() => setStaffRefreshKey((currentKey) => currentKey + 1)} />
+      ) : activeView === "history" ? (
         <HistoryPage key={`${user?.userId}-${user?.role}`} user={user} users={users} departments={departments} />
+      ) : activeView === "report" ? (
+        user?.role === "STAFF" || selectedReportUserId ? (
+          <DailyReportPage user={user} selectedUserId={selectedReportUserId || user.userId} selectedDate={selectedReportDate} onBack={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView(user.role === "STAFF" ? "dashboard" : "report"); }} onViewSnapshot={(id, date) => { setSelectedReportUserId(id); setSelectedReportDate(date); setActiveView("history"); }} />
+        ) : (
+          <TeamDailyReportsPage user={user} departments={departments} onOpenReport={(id, date) => { setSelectedReportUserId(id); setSelectedReportDate(date); }} onOpenOwnReport={() => { setSelectedReportUserId(user.userId); setSelectedReportDate(null); }} />
+        )
       ) : activeView === "dashboard" ? (
         user?.role === "STAFF" ? (
-          <StaffDashboard user={user} refreshKey={staffRefreshKey} onOpenKanban={() => setActiveView("personal")} />
+          <StaffDashboard user={user} refreshKey={staffRefreshKey} onOpenKanban={() => setActiveView("personal")} onOpenReport={() => { setSelectedReportUserId(user.userId); setSelectedReportDate(null); setActiveView("report"); }} />
         ) : user?.role === "ADMIN" ? (
           <AdminDashboard
             user={user}
             departments={departments}
             refreshKey={staffRefreshKey}
-            onOpenHistory={() => setActiveView("history")}
+            onOpenReport={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView("report"); }}
+            onOpenReviews={() => setActiveView("reviews")}
             onViewDepartment={(departmentId) => {
               setSelectedDepartmentId(departmentId);
               setSelectedStaffId("");
@@ -637,6 +652,8 @@ function App() {
             user={user}
             refreshKey={staffRefreshKey}
             onOpenKanban={() => setActiveView("personal")}
+            onOpenReport={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView("report"); }}
+            onOpenReviews={() => setActiveView("reviews")}
             onViewKanban={(staffId) => {
               setSelectedStaffId(String(staffId));
               setActiveView("staff");

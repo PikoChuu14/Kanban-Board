@@ -24,16 +24,13 @@ public class TaskSnapshotService {
     private final TaskSnapshotRepository snapshotRepository;
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
-    private final AuthorizationService authorizationService;
 
     public TaskSnapshotService(SnapshotBatchRepository batchRepository, TaskSnapshotRepository snapshotRepository,
-                               TaskRepository taskRepository, UserRepository userRepository,
-                               AuthorizationService authorizationService) {
+                               TaskRepository taskRepository, UserRepository userRepository) {
         this.batchRepository = batchRepository;
         this.snapshotRepository = snapshotRepository;
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
-        this.authorizationService = authorizationService;
     }
 
     @Transactional

@@ -87,4 +87,9 @@ public class TaskSnapshot {
     public Long getDepartmentId() { return departmentId; }
     public String getDepartmentName() { return departmentName; }
     public String getColumnName() { return columnName; }
+
+    // Used by the deterministic demo seeder to model movement between snapshots.
+    public void setStatus(TaskStatus status) { this.status = status; }
+    public void setAssignee(Long id, String name) { this.assigneeId = id; this.assigneeName = name; }
+    public void setColumnName(String columnName) { this.columnName = columnName; }
 }

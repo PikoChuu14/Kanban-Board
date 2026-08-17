@@ -7,6 +7,7 @@ import com.company.kanban.dto.UpdateTaskRequest;
 import com.company.kanban.dto.UpdateTaskStatusRequest;
 import com.company.kanban.dto.ReviewActionRequest;
 import com.company.kanban.dto.ReassignTaskRequest;
+import com.company.kanban.dto.ReviewQueueItem;
 import com.company.kanban.service.TaskService;
 import com.company.kanban.entity.User;
 import jakarta.validation.Valid;
@@ -39,6 +40,11 @@ public class TaskController {
             @AuthenticationPrincipal User currentUser) {
 
         return taskService.getMyTasks(currentUser);
+    }
+
+    @GetMapping("/reviews")
+    public List<ReviewQueueItem> reviewQueue(@AuthenticationPrincipal User currentUser) {
+        return taskService.reviewQueue(currentUser);
     }
 
     @GetMapping("/user/{userId}")

@@ -91,6 +91,12 @@ public class AuthorizationService {
             return;
         }
 
+        // The owner may always read their own data, regardless of role.
+        if (currentUser != null && staffUser != null
+                && Objects.equals(currentUser.getId(), staffUser.getId())) {
+            return;
+        }
+
         if (currentUser == null || currentUser.getRole() != Role.MANAGER
                 || currentUser.getDepartment() == null
                 || staffUser == null || staffUser.getDepartment() == null
