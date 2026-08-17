@@ -423,8 +423,22 @@ function App() {
         return;
       }
 
-      const targetPosition =
+      let targetPosition =
         targetTask.position + (indicator.position === "after" ? 1 : 0);
+
+      if (
+        targetTask.columnId === task.columnId &&
+        targetTask.position > task.position
+      ) {
+        targetPosition -= 1;
+      }
+
+      if (
+        targetTask.columnId === task.columnId &&
+        targetPosition === task.position
+      ) {
+        return;
+      }
 
       await moveTaskRef.current(task, indicator.columnId, targetPosition);
     }
