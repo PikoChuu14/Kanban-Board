@@ -2,6 +2,7 @@ package com.company.kanban.service;
 
 import com.company.kanban.dto.BoardResponse;
 import com.company.kanban.dto.CreateBoardRequest;
+import com.company.kanban.dto.UpdateBoardRequest;
 import com.company.kanban.entity.Board;
 import com.company.kanban.entity.Department;
 import com.company.kanban.entity.KanbanColumn;
@@ -9,9 +10,11 @@ import com.company.kanban.entity.User;
 import com.company.kanban.repository.BoardRepository;
 import com.company.kanban.repository.DepartmentRepository;
 import com.company.kanban.repository.KanbanColumnRepository;
+import com.company.kanban.repository.TaskRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -22,17 +25,20 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final DepartmentRepository departmentRepository;
     private final KanbanColumnRepository kanbanColumnRepository;
+    private final TaskRepository taskRepository;
     private final AuthorizationService authorizationService;
 
     public BoardService(
             BoardRepository boardRepository,
             DepartmentRepository departmentRepository,
             KanbanColumnRepository kanbanColumnRepository,
+            TaskRepository taskRepository,
             AuthorizationService authorizationService) {
 
         this.boardRepository = boardRepository;
         this.departmentRepository = departmentRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
+        this.taskRepository = taskRepository;
         this.authorizationService = authorizationService;
     }
 
@@ -73,13 +79,9 @@ public class BoardService {
                 .toList();
     }
 
-    public BoardResponse createBoard(
+        @Transactional
+        public BoardResponse createBoard(
             CreateBoardRequest request, User currentUser) {
-
-        if (!authorizationService.isAdmin(currentUser)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Only administrators can manage boards");
-        }
 
         Department department =
                 departmentRepository
@@ -90,6 +92,11 @@ public class BoardService {
                                         "Department not found"
                                 )
                         );
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                department.getId()
+        );
 
         if (boardRepository
                 .existsByNameIgnoreCaseAndDepartmentId(
@@ -128,6 +135,65 @@ public class BoardService {
         );
 
         return toResponse(savedBoard);
+    }
+
+    @Transactional
+    public BoardResponse updateBoard(
+            Long boardId, UpdateBoardRequest request, User currentUser) {
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Board not found"
+                ));
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                board.getDepartment().getId()
+        );
+
+        if (!board.getName().equalsIgnoreCase(request.name())
+                && boardRepository.existsByNameIgnoreCaseAndDepartmentId(
+                        request.name(), board.getDepartment().getId())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "A board with this name already exists in this department"
+            );
+        }
+
+        board.setName(request.name());
+        board.setDescription(request.description());
+
+        return toResponse(board);
+    }
+
+    @Transactional
+    public void deleteBoard(Long boardId, User currentUser) {
+
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Board not found"
+                ));
+
+        authorizationService.requireBoardManagementAccess(
+                currentUser,
+                board.getDepartment().getId()
+        );
+
+        if (taskRepository.existsByColumnBoardId(boardId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Cannot delete board because it still contains tasks"
+            );
+        }
+
+        // Columns are not configured with cascade delete. Remove the empty
+        // columns first so deleting the board cannot leave orphaned rows or
+        // fail on the foreign-key constraint.
+        kanbanColumnRepository.deleteByBoardId(boardId);
+        boardRepository.delete(board);
     }
 
     private BoardResponse toResponse(Board board) {

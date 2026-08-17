@@ -1,9 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import CreateTaskModal from "./components/CreateTaskModal";
+import CreateBoardModal from "./components/CreateBoardModal";
 import ConfirmDeleteModal from "./components/ConfirmDeleteModal";
+import ConfirmDeleteBoardModal from "./components/ConfirmDeleteBoardModal";
+import EditBoardModal from "./components/EditBoardModal";
 import EditTaskModal from "./components/EditTaskModal";
 import LoginPage from "./components/LoginPage";
+import AppShell from "./components/AppShell";
+import PersonalKanban from "./pages/PersonalKanban";
+import StaffKanban from "./pages/StaffKanban";
+import ManagerDashboard from "./pages/ManagerDashboard";
+import StaffDashboard from "./pages/StaffDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import ReviewQueuePage from "./pages/ReviewQueuePage";
+import HistoryPage from "./pages/HistoryPage";
+import ReassignTaskModal from "./components/ReassignTaskModal";
+import DailyReportPage from "./pages/DailyReportPage";
+import TeamDailyReportsPage from "./pages/TeamDailyReportsPage";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -17,13 +31,17 @@ function TaskCardContent({ task }) {
 
       <p>{task.description}</p>
 
+      {task.boardName && <small className="task-board-name">{task.boardName}</small>}
+
       <div className="task-meta">
-        <span>{task.priority}</span>
+        <span>{task.priority} · Workload {task.workload ?? "—"}</span>
 
         {task.assigneeName && <span>{task.assigneeName}</span>}
       </div>
 
       {task.dueDate && <small>Due: {task.dueDate}</small>}
+
+      {task.createdByName && <small>Created by {task.createdByName}</small>}
     </>
   );
 }
@@ -32,17 +50,30 @@ function App() {
   const { user, logout, loading, isAuthenticated } = useAuth();
   const isAdmin = user?.role === "ADMIN";
   const isManager = user?.role === "MANAGER";
+  const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
+  const canViewProjectBoard = isAdmin || isManager;
+  const [activeView, setActiveView] = useState("dashboard");
+  const [selectedStaffId, setSelectedStaffId] = useState("");
+  const [staffRefreshKey, setStaffRefreshKey] = useState(0);
+  const [selectedReportUserId, setSelectedReportUserId] = useState(null);
+  const [selectedReportDate, setSelectedReportDate] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [boards, setBoards] = useState([]);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
+  const [showCreateBoard, setShowCreateBoard] = useState(false);
+  const [boardToEdit, setBoardToEdit] = useState(null);
+  const [boardToDelete, setBoardToDelete] = useState(null);
+  const [deletingBoard, setDeletingBoard] = useState(false);
+  const [deleteBoardError, setDeleteBoardError] = useState("");
 
   const [columns, setColumns] = useState([]);
   const [tasksByColumn, setTasksByColumn] = useState({});
   const [users, setUsers] = useState([]);
   const [selectedColumn, setSelectedColumn] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [taskToReassign, setTaskToReassign] = useState(null);
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [deletingTask, setDeletingTask] = useState(false);
   const [draggedTask, setDraggedTask] = useState(null);
@@ -54,6 +85,9 @@ function App() {
   const pointerDownRef = useRef(null);
   const tasksByColumnRef = useRef(tasksByColumn);
   const moveTaskRef = useRef(null);
+  const selectedStaff = users.find(
+    (candidate) => candidate.id === Number(selectedStaffId)
+  ) ?? null;
 
   const loadBoard = useCallback(async (boardId) => {
     try {
@@ -96,6 +130,14 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated || !user) {
+      return;
+    }
+
+    setActiveView("dashboard");
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setUsers([]);
       return;
@@ -134,42 +176,45 @@ function App() {
     }
   }, [user, isAdmin]);
 
-  useEffect(() => {
-    if (selectedDepartmentId === null) {
-      return;
-    }
+  const loadBoards = useCallback(async (departmentId, preferredBoardId = null) => {
+    try {
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/boards/department/${departmentId}`
+      );
 
-    async function loadBoards() {
-      try {
-        const response = await apiFetch(
-          `${API_BASE_URL}/api/boards/department/${selectedDepartmentId}`
-        );
-
-        if (!response.ok) {
-          if (response.status === 403) {
-            setPermissionMessage("You do not have permission to access this department.");
-          }
-          throw new Error(`Boards request failed (${response.status}).`);
+      if (!response.ok) {
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to access this department.");
         }
-
-        const data = await response.json();
-
-        setBoards(data);
-
-        if (data.length > 0) {
-          setSelectedBoardId(data[0].id);
-        } else {
-          setSelectedBoardId(null);
-          setColumns([]);
-          setTasksByColumn({});
-        }
-      } catch (error) {
-        console.error("Failed to load boards:", error);
+        throw new Error(`Boards request failed (${response.status}).`);
       }
-    }
 
-    loadBoards();
-  }, [selectedDepartmentId]);
+      const data = await response.json();
+
+      setBoards(data);
+
+      if (data.length > 0) {
+        const selectedBoardStillExists = data.some(
+          (board) => board.id === preferredBoardId
+        );
+        setSelectedBoardId(
+          selectedBoardStillExists ? preferredBoardId : data[0].id
+        );
+      } else {
+        setSelectedBoardId(null);
+        setColumns([]);
+        setTasksByColumn({});
+      }
+    } catch (error) {
+      console.error("Failed to load boards:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedDepartmentId !== null) {
+      loadBoards(selectedDepartmentId);
+    }
+  }, [selectedDepartmentId, loadBoards]);
 
   useEffect(() => {
     if (selectedBoardId !== null) {
@@ -179,7 +224,7 @@ function App() {
 
     setColumns([]);
     setTasksByColumn({});
-  }, [selectedBoardId, loadBoard]);
+  }, [activeView, selectedBoardId, loadBoard]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -277,6 +322,7 @@ function App() {
     const rect = card.getBoundingClientRect();
     pointerDownRef.current = {
       task,
+      canDrag: task.assigneeId === user?.userId,
       startX: event.clientX,
       startY: event.clientY,
       offsetX: event.clientX - rect.left,
@@ -312,7 +358,7 @@ function App() {
       const pointerDown = pointerDownRef.current;
       const task = draggedTaskRef.current;
 
-      if (!pointerDown) {
+      if (!pointerDown || !pointerDown.canDrag) {
         return;
       }
 
@@ -442,6 +488,70 @@ function App() {
     setSelectedColumn(null);
   }
 
+  async function handleBoardCreated(createdBoard) {
+    setSelectedDepartmentId(createdBoard.departmentId);
+    await loadBoards(createdBoard.departmentId, createdBoard.id);
+  }
+
+  async function handleBoardUpdated(updatedBoard) {
+    await loadBoards(updatedBoard.departmentId, updatedBoard.id);
+  }
+
+  function requestDeleteBoard(board) {
+    setDeleteBoardError("");
+    setBoardToDelete(board);
+  }
+
+  function cancelDeleteBoard() {
+    setBoardToDelete(null);
+    setDeleteBoardError("");
+  }
+
+  async function confirmDeleteBoard() {
+    if (!boardToDelete) {
+      return;
+    }
+
+    setDeletingBoard(true);
+    setDeleteBoardError("");
+
+    try {
+      const response = await apiFetch(
+        `${API_BASE_URL}/api/boards/${boardToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          const data = await response.json().catch(() => null);
+          setDeleteBoardError(
+            data?.message || "Cannot delete board because it still contains tasks"
+          );
+          return;
+        }
+
+        if (response.status === 403) {
+          setPermissionMessage("You do not have permission to delete this board.");
+        }
+
+        throw new Error(`Failed to delete board (${response.status}).`);
+      }
+
+      const departmentId = boardToDelete.departmentId;
+      setBoardToDelete(null);
+      await loadBoards(departmentId);
+    } catch (error) {
+      if (boardToDelete) {
+        setDeleteBoardError("Unable to delete the board. Please try again.");
+      }
+      console.error("Failed to delete board:", error);
+    } finally {
+      setDeletingBoard(false);
+    }
+  }
+
   function requestDeleteTask(task) {
     setSelectedTask(null);
     setTaskToDelete(task);
@@ -467,6 +577,7 @@ function App() {
       }
 
       setTaskToDelete(null);
+      setStaffRefreshKey((currentKey) => currentKey + 1);
 
       if (selectedBoardId !== null) {
         await loadBoard(selectedBoardId);
@@ -487,23 +598,17 @@ function App() {
   }
 
   return (
+    <AppShell
+      user={user}
+      activeView={activeView}
+      onNavigate={(view) => {
+        if (view === "dashboard") setStaffRefreshKey((currentKey) => currentKey + 1);
+        if (view === "report") { setSelectedReportUserId(null); setSelectedReportDate(null); }
+        setActiveView(view);
+      }}
+      onLogout={logout}
+    >
     <div className="app">
-      <div className="user-toolbar">
-        <div>
-          <strong>{user?.name}</strong>
-
-          <span>
-            {user?.departmentName}
-            {" \u00b7 "}
-            {user?.role}
-          </span>
-        </div>
-
-        <button type="button" onClick={logout}>
-          Logout
-        </button>
-      </div>
-
       {permissionMessage && (
         <div className="permission-message" role="alert">
           {permissionMessage}
@@ -511,6 +616,86 @@ function App() {
         </div>
       )}
 
+      {activeView === "reviews" ? (
+        <ReviewQueuePage onRefresh={() => setStaffRefreshKey((currentKey) => currentKey + 1)} />
+      ) : activeView === "history" ? (
+        <HistoryPage key={`${user?.userId}-${user?.role}`} user={user} users={users} departments={departments} />
+      ) : activeView === "report" ? (
+        user?.role === "STAFF" || selectedReportUserId ? (
+          <DailyReportPage user={user} selectedUserId={selectedReportUserId || user.userId} selectedDate={selectedReportDate} onBack={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView(user.role === "STAFF" ? "dashboard" : "report"); }} onViewSnapshot={(id, date) => { setSelectedReportUserId(id); setSelectedReportDate(date); setActiveView("history"); }} />
+        ) : (
+          <TeamDailyReportsPage user={user} departments={departments} onOpenReport={(id, date) => { setSelectedReportUserId(id); setSelectedReportDate(date); }} onOpenOwnReport={() => { setSelectedReportUserId(user.userId); setSelectedReportDate(null); }} />
+        )
+      ) : activeView === "dashboard" ? (
+        user?.role === "STAFF" ? (
+          <StaffDashboard user={user} refreshKey={staffRefreshKey} onOpenKanban={() => setActiveView("personal")} onOpenReport={() => { setSelectedReportUserId(user.userId); setSelectedReportDate(null); setActiveView("report"); }} />
+        ) : user?.role === "ADMIN" ? (
+          <AdminDashboard
+            user={user}
+            departments={departments}
+            refreshKey={staffRefreshKey}
+            onOpenReport={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView("report"); }}
+            onOpenReviews={() => setActiveView("reviews")}
+            onViewDepartment={(departmentId) => {
+              setSelectedDepartmentId(departmentId);
+              setSelectedStaffId("");
+              setActiveView("staff");
+            }}
+            onViewProject={(board) => {
+              setSelectedDepartmentId(board.departmentId);
+              setSelectedBoardId(board.id);
+              setActiveView("project");
+            }}
+          />
+        ) : (
+          <ManagerDashboard
+            user={user}
+            refreshKey={staffRefreshKey}
+            onOpenKanban={() => setActiveView("personal")}
+            onOpenReport={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView("report"); }}
+            onOpenReviews={() => setActiveView("reviews")}
+            onViewKanban={(staffId) => {
+              setSelectedStaffId(String(staffId));
+              setActiveView("staff");
+            }}
+            onViewProject={(board) => {
+              setSelectedDepartmentId(board.departmentId);
+              setSelectedBoardId(board.id);
+              setActiveView("project");
+            }}
+          />
+        )
+      ) : activeView === "personal" ? (
+        <PersonalKanban user={user} />
+      ) : activeView === "staff" ? (
+        <>
+          <div className="board-toolbar staff-selector-toolbar">
+            <div className="toolbar-field">
+              <label htmlFor="staff-select">Staff member</label>
+              <select
+                id="staff-select"
+                value={selectedStaffId}
+                onChange={(event) => setSelectedStaffId(event.target.value)}
+              >
+                <option value="">Select staff member</option>
+                {users.filter((candidate) => candidate.role === "STAFF").map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>
+                    {candidate.name || candidate.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <StaffKanban
+            staffUser={selectedStaff}
+            refreshKey={staffRefreshKey}
+            onTaskSelected={setSelectedTask}
+            onTaskChanged={() => setStaffRefreshKey((currentKey) => currentKey + 1)}
+            onReassignTask={setTaskToReassign}
+          />
+        </>
+      ) : (
+        <>
       <h1>
         {boards.find((board) => board.id === selectedBoardId)?.name ||
           "Company Kanban"}
@@ -561,6 +746,40 @@ function App() {
             ))}
           </select>
         </div>
+
+        {canManageBoards && (
+          <>
+            <button
+              type="button"
+              className="create-board-button"
+              onClick={() => setBoardToEdit(
+                boards.find((board) => board.id === selectedBoardId) ?? null
+              )}
+              disabled={selectedBoardId === null}
+            >
+              Edit Board
+            </button>
+            <button
+              type="button"
+              className="create-board-button"
+              onClick={() =>
+                requestDeleteBoard(
+                  boards.find((board) => board.id === selectedBoardId) ?? null
+                )
+              }
+              disabled={selectedBoardId === null}
+            >
+              Delete Board
+            </button>
+            <button
+              type="button"
+              className="create-board-button"
+              onClick={() => setShowCreateBoard(true)}
+            >
+              + Create Board
+            </button>
+          </>
+        )}
       </div>
 
       {selectedDepartmentId !== null && boards.length === 0 && (
@@ -600,6 +819,8 @@ function App() {
                     <div
                       className={`task-card ${
                         draggedTask?.id === task.id ? "task-card--dragging" : ""
+                      } ${
+                        task.assigneeId === user?.userId ? "" : "task-card--read-only"
                       }`}
                       data-column-id={column.id}
                       data-task-id={task.id}
@@ -640,6 +861,8 @@ function App() {
           </div>
         </div>
       )}
+        </>
+      )}
 
       {selectedColumn && (
         <CreateTaskModal
@@ -647,11 +870,29 @@ function App() {
           column={selectedColumn}
           users={users}
           onClose={closeCreateTaskModal}
-          onCreated={() =>
-            selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
-          }
+          onCreated={async () => {
+            setStaffRefreshKey((currentKey) => currentKey + 1);
+            if (selectedBoardId !== null) {
+              await loadBoard(selectedBoardId);
+            }
+          }}
         />
       )}
+
+      <CreateBoardModal
+        isOpen={showCreateBoard}
+        user={user}
+        departments={departments}
+        onClose={() => setShowCreateBoard(false)}
+        onCreated={handleBoardCreated}
+      />
+
+      <EditBoardModal
+        key={boardToEdit?.id ?? "closed"}
+        board={boardToEdit}
+        onClose={() => setBoardToEdit(null)}
+        onUpdated={handleBoardUpdated}
+      />
 
       <EditTaskModal
         key={selectedTask?.id ?? "closed"}
@@ -659,10 +900,27 @@ function App() {
         users={users}
         canDelete={canDeleteTask}
         onClose={() => setSelectedTask(null)}
-        onTaskUpdated={() =>
-          selectedBoardId !== null ? loadBoard(selectedBoardId) : undefined
-        }
+        onTaskUpdated={async () => {
+          if (selectedBoardId !== null) {
+            await loadBoard(selectedBoardId);
+          }
+          setStaffRefreshKey((currentKey) => currentKey + 1);
+        }}
         onDelete={requestDeleteTask}
+      />
+
+      <ReassignTaskModal
+        task={taskToReassign}
+        users={users}
+        onClose={() => setTaskToReassign(null)}
+        onReassigned={async (updatedTask) => {
+          setTaskToReassign(null);
+          setStaffRefreshKey((currentKey) => currentKey + 1);
+          if (selectedBoardId !== null) {
+            await loadBoard(selectedBoardId);
+          }
+          return updatedTask;
+        }}
       />
 
       <ConfirmDeleteModal
@@ -671,7 +929,16 @@ function App() {
         onCancel={() => setTaskToDelete(null)}
         onConfirm={confirmDeleteTask}
       />
+
+      <ConfirmDeleteBoardModal
+        board={boardToDelete}
+        deleting={deletingBoard}
+        error={deleteBoardError}
+        onCancel={cancelDeleteBoard}
+        onConfirm={confirmDeleteBoard}
+      />
     </div>
+    </AppShell>
   );
 }
 

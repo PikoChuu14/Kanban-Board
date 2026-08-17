@@ -9,12 +9,14 @@ import com.company.kanban.repository.KanbanColumnRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Configuration
+@Profile("!demo")
 public class DataInitializer {
 
     private static final String PPC_DEPARTMENT_NAME = "PPC";

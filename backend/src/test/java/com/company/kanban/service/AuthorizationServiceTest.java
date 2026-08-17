@@ -43,6 +43,32 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void onlyAdminOrSameDepartmentManagerCanManageBoards() {
+        Department department = mock(Department.class);
+        when(department.getId()).thenReturn(10L);
+
+        User admin = mock(User.class);
+        when(admin.getRole()).thenReturn(Role.ADMIN);
+
+        User manager = mock(User.class);
+        when(manager.getRole()).thenReturn(Role.MANAGER);
+        when(manager.getDepartment()).thenReturn(department);
+
+        User staff = mock(User.class);
+        when(staff.getRole()).thenReturn(Role.STAFF);
+        when(staff.getDepartment()).thenReturn(department);
+
+        assertDoesNotThrow(() ->
+                authorizationService.requireBoardManagementAccess(admin, 20L));
+        assertDoesNotThrow(() ->
+                authorizationService.requireBoardManagementAccess(manager, 10L));
+        assertThrows(ResponseStatusException.class, () ->
+                authorizationService.requireBoardManagementAccess(manager, 20L));
+        assertThrows(ResponseStatusException.class, () ->
+                authorizationService.requireBoardManagementAccess(staff, 10L));
+    }
+
+    @Test
     void adminCanAssignAnyUser() {
         User admin = mock(User.class);
         when(admin.getRole()).thenReturn(Role.ADMIN);
