@@ -29,6 +29,15 @@ public class DailyWorkReportService {
     public DailyWorkReportService(DailyWorkReportRepository r, UserRepository u, SnapshotBatchRepository b, TaskSnapshotRepository s, TaskRepository t, AuthorizationService a, NotificationService n) { reportRepository=r; userRepository=u; batchRepository=b; snapshotRepository=s; taskRepository=t; authorizationService=a; notificationService=n; }
     public LocalDate today() { return LocalDate.now(COMPANY_ZONE); }
 
+    @Transactional(readOnly = true)
+    public List<Map<String,Object>> availability(User current, YearMonth month, Long requestedDepartmentId) {
+        Long departmentId = current.getRole() == Role.MANAGER ? current.getDepartment().getId() : requestedDepartmentId;
+        Set<Long> staffIds = current.getRole() == Role.STAFF ? Set.of(current.getId()) :
+                userRepository.findByDepartmentIdOrderByNameAsc(departmentId).stream().filter(u -> u.getRole() == Role.STAFF).map(User::getId).collect(Collectors.toSet());
+        LocalDate start = month.atDay(1), end = month.atEndOfMonth();
+        return reportRepository.findByReportDateBetween(start, end).stream().filter(r -> staffIds.contains(r.getUser().getId())).collect(Collectors.groupingBy(DailyWorkReport::getReportDate, LinkedHashMap::new, Collectors.toList())).entrySet().stream().map(e -> { Map<String,Object> row = new LinkedHashMap<>(); row.put("date", e.getKey()); row.put("hasReports", true); row.put("submitted", e.getValue().stream().filter(r -> r.getStatus() == DailyWorkReportStatus.SUBMITTED).count()); row.put("draft", e.getValue().stream().filter(r -> r.getStatus() == DailyWorkReportStatus.DRAFT).count()); return row; }).toList();
+    }
+
     @Transactional
     public DailyWorkReport saveDraft(User current, LocalDate date, DailyWorkReportRequest request) {
         if (!date.equals(today())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Staff can only edit today's report");
@@ -163,6 +172,110 @@ public class DailyWorkReportService {
     private int count(List<TaskSnapshot> t,TaskStatus s){return (int)t.stream().filter(x->x.getStatus()==s).count();}
     private SnapshotData readSnapshot(LocalDate date, SnapshotType type, Long userId){ var b=batchRepository.findBySnapshotDateAndSnapshotType(date,type).filter(x->x.getStatus()==SnapshotBatchStatus.COMPLETED).orElse(null); if(b==null)return new SnapshotData(null,List.of(),type==SnapshotType.START_OF_DAY?"Start-of-day snapshot is not available.":"End-of-day snapshot is not available."); return new SnapshotData(b,snapshotRepository.findByBatchIdAndAssigneeIdOrderByStatusAscPositionAsc(b.getId(),userId),b.isRecovered()?(type==SnapshotType.START_OF_DAY?"Recovered start-of-day snapshot":"Recovered end-of-day snapshot"):null); }
     private record SnapshotData(SnapshotBatch batch,List<TaskSnapshot> tasks,String note){}
+
+    @Transactional(readOnly = true)
+    public WeeklyReportResponse weeklyReports(User current, LocalDate requestedWeekStart, Long requestedDepartmentId) {
+        DepartmentScope scope = departmentScope(current, requestedDepartmentId);
+        LocalDate start = requestedWeekStart == null ? today().with(java.time.DayOfWeek.MONDAY) : requestedWeekStart;
+        start = start.with(java.time.DayOfWeek.MONDAY);
+        LocalDate end = start.plusDays(6);
+        List<User> staff = userRepository.findByDepartmentIdOrderByNameAsc(scope.departmentId()).stream()
+                .filter(u -> u.getRole() == Role.STAFF).toList();
+        List<WeeklyReportResponse.Day> days = new ArrayList<>();
+        Set<Long> completed = new HashSet<>();
+        Set<Long> reviewed = new HashSet<>();
+        List<Integer> workloads = new ArrayList<>();
+        int submitted = 0, drafts = 0, notStarted = 0;
+        Map<Long, Integer> firstStartLoads = new HashMap<>(), latestEndLoads = new HashMap<>();
+        boolean weekEndCurrent = false;
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            List<WeeklyReportResponse.StaffDay> dayStaff = new ArrayList<>();
+            for (User user : staff) {
+                DailyReportViewResponse detail = build(user, date);
+                var report = detail.report();
+                if ("SUBMITTED".equals(report.reportStatus())) submitted++;
+                else if ("DRAFT".equals(report.reportStatus())) drafts++;
+                else notStarted++;
+                var right = detail.rightHandState();
+                if (right != null && (!"START_OF_DAY_ONLY".equals(detail.rightHandSource()) && !"UNAVAILABLE".equals(detail.rightHandSource()))) {
+                    workloads.add(right.activeWorkload());
+                }
+                if (detail.startOfDay() != null) firstStartLoads.putIfAbsent(user.getId(), detail.startOfDay().activeWorkload());
+                if (right != null && ("END_OF_DAY".equals(detail.rightHandSource()) || "CURRENT".equals(detail.rightHandSource()))) {
+                    latestEndLoads.put(user.getId(), right.activeWorkload());
+                    weekEndCurrent = "CURRENT".equals(detail.rightHandSource());
+                }
+                List<WeeklyReportResponse.Task> tasks = weeklyTasks(detail);
+                int dayCompleted = 0, dayReview = 0;
+                for (var task : detail.completedTasks()) if (completed.add(task.taskId())) dayCompleted++;
+                for (var task : detail.reviewTasks()) {
+                    TaskSnapshot before = readSnapshot(date, SnapshotType.START_OF_DAY, user.getId()).tasks().stream()
+                            .filter(t -> Objects.equals(t.getTaskId(), task.taskId())).findFirst().orElse(null);
+                    if (before != null && before.getStatus() != TaskStatus.REVIEW && reviewed.add(task.taskId())) dayReview++;
+                }
+                dayStaff.add(new WeeklyReportResponse.StaffDay(user.getId(), user.getName(), report.reportStatus(),
+                        report.workSummary(), report.blockers(), report.nextDayPlan(), report.submittedAt(),
+                        snapshot(detail.startOfDay()), snapshot(right), detail.rightHandSource(), tasks, dayCompleted, dayReview));
+            }
+            days.add(new WeeklyReportResponse.Day(date, dayStaff));
+        }
+        Integer startWorkload = firstStartLoads.isEmpty() ? null : firstStartLoads.values().stream().mapToInt(Integer::intValue).sum();
+        Integer endWorkload = latestEndLoads.isEmpty() ? null : latestEndLoads.values().stream().mapToInt(Integer::intValue).sum();
+        return new WeeklyReportResponse(start, end, scope.departmentId(), scope.departmentName(),
+                new WeeklyReportResponse.Overview(staff.size(), submitted, drafts, notStarted, completed.size(), reviewed.size(),
+                        workloads.isEmpty() ? null : (int) Math.round(workloads.stream().mapToInt(Integer::intValue).average().orElse(0)),
+                        startWorkload, endWorkload, weekEndCurrent), days);
+    }
+
+    private DepartmentScope departmentScope(User current, Long requestedDepartmentId) {
+        if (current == null || (current.getRole() != Role.ADMIN && current.getRole() != Role.MANAGER))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Management access required");
+        Long departmentId = current.getRole() == Role.MANAGER ? current.getDepartment().getId() : requestedDepartmentId;
+        if (departmentId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "departmentId is required");
+        if (current.getRole() == Role.MANAGER && !departmentId.equals(current.getDepartment().getId()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this department");
+        Department department = current.getRole() == Role.MANAGER ? current.getDepartment() : userRepository.findAll().stream()
+                .map(User::getDepartment).filter(d -> d.getId().equals(departmentId)).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department not found"));
+        return new DepartmentScope(department.getId(), department.getName());
+    }
+    private record DepartmentScope(Long departmentId, String departmentName) {}
+    private WeeklyReportResponse.Snapshot snapshot(DailyReportViewResponse.SnapshotSummary s) {
+        return s == null ? null : new WeeklyReportResponse.Snapshot(s.draftCount(), s.doingCount(), s.reviewCount(), s.doneCount(), s.activeWorkload());
+    }
+    private List<WeeklyReportResponse.Task> weeklyTasks(DailyReportViewResponse detail) {
+        List<DailyReportViewResponse.TaskItem> source = new ArrayList<>();
+        source.addAll(detail.reviewTasks()); source.addAll(detail.completedTasks()); source.addAll(detail.activeTasks());
+        source.sort(Comparator.comparingInt(t -> statusRank(t.status())));
+        return source.stream().limit(4).map(t -> new WeeklyReportResponse.Task(t.taskId(), t.title(), t.status(), t.workload(), t.boardName())).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] weeklyPdf(User current, LocalDate weekStart, Long departmentId) {
+        WeeklyReportResponse report = weeklyReports(current, weekStart, departmentId);
+        try (PDDocument document = new PDDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            List<PDPage> pages = new ArrayList<>(); PDPageContentStream stream = null; float y = 0;
+            for (WeeklyReportResponse.Day day : report.days()) {
+                for (WeeklyReportResponse.StaffDay staff : day.staff()) {
+                    List<String> lines = weeklyPdfLines(day.date(), staff);
+                    if (stream == null || y - (lines.size() * 10 + 24) < 58) {
+                        if (stream != null) stream.close();
+                        PDPage page = new PDPage(PDRectangle.A4); document.addPage(page); pages.add(page);
+                        stream = new PDPageContentStream(document, page); y = page.getMediaBox().getHeight() - 42;
+                        if (pages.size() == 1) { text(stream, "KOVAX FLOWOPS", 42, y, 9, true); y -= 18; text(stream, "Weekly Report", 42, y, 17, true); y -= 17; text(stream, report.departmentName() + " - " + report.weekStart() + " to " + report.weekEnd(), 42, y, 9, false); y -= 18; line(stream, 42, y, 553); y -= 16; text(stream, weeklyOverviewLine(report.overview()), 42, y, 7.6f, false); y -= 18; }
+                    }
+                    line(stream, 42, y, 553); y -= 13; text(stream, day.date().getDayOfWeek().name() + " - " + day.date(), 42, y, 10, true); y -= 13;
+                    for (String line : lines) { text(stream, line, 50, y, line.endsWith("SUMMARY") || line.endsWith("BLOCKER") || line.endsWith("NEXT") || line.equals("TASKS") ? 8.2f : 8, line.endsWith("SUMMARY") || line.endsWith("BLOCKER") || line.endsWith("NEXT") || line.equals("TASKS")); y -= 10; }
+                    y -= 5;
+                }
+            }
+            if (stream != null) stream.close(); document.save(out); return out.toByteArray();
+        } catch (Exception e) { throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to generate weekly PDF", e); }
+    }
+    private List<String> weeklyPdfLines(LocalDate date, WeeklyReportResponse.StaffDay s) { List<String> l = new ArrayList<>(); l.add(s.userName() + " - " + s.status()); if ("NOT_STARTED".equals(s.status())) { l.add("No report submitted."); return l; } l.add("SUMMARY"); l.add(compact(s.workSummary(), 125)); l.add("BLOCKER"); l.add(compact(s.blockers(), 105)); l.add("NEXT"); l.add(compact(s.nextDayPlan(), 105)); l.add("TASKS"); for (var t : s.tasks()) l.add("[" + t.status() + "] " + compact(t.title(), 68)); l.add("Completed " + s.completedCount() + " | Review " + s.reviewCount() + " | " + metricLine(s.start(), s.end(), s.rightHandSource())); return l; }
+    private String metricLine(WeeklyReportResponse.Snapshot a, WeeklyReportResponse.Snapshot b, String source) { if (a == null && b == null) return "Snapshot unavailable"; if (b == null) return "Start snapshot available"; return String.format("Draft %d->%d | Doing %d->%d | Review %d->%d | Done %d->%d | Workload %d->%d%s", a == null ? 0 : a.draft(), b.draft(), a == null ? 0 : a.doing(), b.doing(), a == null ? 0 : a.review(), b.review(), a == null ? 0 : a.done(), b.done(), a == null ? 0 : a.workload(), b.workload(), "CURRENT".equals(source) ? " current" : ""); }
+    private String weeklyOverviewLine(WeeklyReportResponse.Overview o) { return String.format("Staff %d | Submitted %d | Draft %d | Not started %d | Completed %d | Moved to review %d | Avg workload %s | Week workload %s -> %s%s", o.staff(), o.dailyReportsSubmitted(), o.draftReports(), o.notStarted(), o.tasksCompleted(), o.tasksMovedToReview(), value(o.averageActiveWorkload()), value(o.weekStartWorkload()), value(o.weekEndWorkload()), o.weekEndCurrent() ? " current" : ""); }
+    private String value(Integer value) { return value == null ? "—" : value.toString(); }
 
     @Transactional(readOnly = true)
     public byte[] pdf(User current, Long userId, LocalDate date) {

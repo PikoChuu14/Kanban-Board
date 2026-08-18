@@ -9,7 +9,8 @@ const icons = {
   reviews: <><path d="M5 5h14v14H5z" /><path d="m8 12 2.5 2.5L16 9" /></>,
   report: <><path d="M6 3h9l3 3v15H6z" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
-  chevron: <path d="m9 6 6 6-6 6" />,
+  chevronLeft: <path d="m15 6-6 6 6 6" />,
+  chevronRight: <path d="m9 6 6 6-6 6" />,
 };
 
 function Icon({ name, size = 19 }) {
@@ -49,8 +50,8 @@ function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogo
       </nav>
       <div className="sidebar-spacer" />
       <div className="sidebar-profile" title={`${user?.name || user?.email || "User"} · ${user?.role || ""}${user?.departmentName ? ` · ${user.departmentName}` : ""}`}><div className="avatar">{(user?.name || user?.email || "K").slice(0, 1).toUpperCase()}</div><div className="profile-copy"><strong>{user?.name || user?.email || "User"}</strong><span>{user?.role}{user?.departmentName ? ` · ${user.departmentName}` : ""}</span></div></div>
-      <button type="button" className="sidebar-logout" onClick={onLogout}><span className="logout-symbol">↪</span><span>Sign out</span></button>
-      <button type="button" className="sidebar-collapse" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((value) => !value)}><Icon name="chevron" /><span>{collapsed ? "Expand" : "Collapse"}</span></button>
+      {!collapsed && <button type="button" className="sidebar-logout" onClick={onLogout}><span className="logout-symbol">↪</span><span>Sign out</span></button>}
+      <button type="button" className="sidebar-collapse" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((value) => !value)}><Icon name={collapsed ? "chevronRight" : "chevronLeft"} /><span>{collapsed ? "Expand" : "Collapse"}</span></button>
     </aside>
     <main className="app-main">
       <NotificationBell onNavigate={onNotificationNavigate} />

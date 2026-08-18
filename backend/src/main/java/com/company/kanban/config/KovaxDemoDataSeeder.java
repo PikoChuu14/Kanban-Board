@@ -166,7 +166,9 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
     private int columnIndex(TaskStatus s) { return switch (s) { case DRAFT -> 0; case DOING -> 1; case REVIEW -> 2; case DONE -> 3; }; }
 
     private void seedSnapshots(List<Task> current) {
-        List<LocalDate> dates = List.of(LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 11), LocalDate.of(2026, 8, 12), LocalDate.of(2026, 8, 13), LocalDate.of(2026, 8, 14), DEMO_DATE);
+        // Include the weekend so the Aug 10-16 demo week exercises the Monday-Sunday
+        // weekly report range instead of looking like a Monday-Friday report.
+        List<LocalDate> dates = List.of(LocalDate.of(2026, 8, 10), LocalDate.of(2026, 8, 11), LocalDate.of(2026, 8, 12), LocalDate.of(2026, 8, 13), LocalDate.of(2026, 8, 14), LocalDate.of(2026, 8, 15), LocalDate.of(2026, 8, 16), DEMO_DATE);
         for (LocalDate date : dates) {
             createSnapshot(date, SnapshotType.START_OF_DAY, false, current, date.equals(LocalDate.of(2026, 8, 13)));
             if (!date.equals(DEMO_DATE)) createSnapshot(date, SnapshotType.END_OF_DAY, date.equals(LocalDate.of(2026, 8, 12)), current, date.equals(LocalDate.of(2026, 8, 13)));
@@ -188,7 +190,10 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
 
     private void seedReports(Map<String, User> people) {
         List<String> names = List.of("John", "Farid", "Lina", "Aisyah", "Mei", "Kumar", "Siti", "Raj", "Amir", "Jisoo", "Wei", "Nadia", "Afiq", "Nurul", "Adam", "Chen", "Hana", "Daniel");
-        for (int day = 10; day <= 14; day++) for (int i = 0; i < names.size(); i++) {
+        // Populate every day of the Aug 10-16 demo week. A few staff/day combinations
+        // intentionally remain missing or draft so the weekly status summaries are useful
+        // for checking SUBMITTED, DRAFT, and NOT_STARTED rendering.
+        for (int day = 10; day <= 16; day++) for (int i = 0; i < names.size(); i++) {
             if ((day + i) % 7 == 0 || (day == 14 && names.get(i).equals("Nadia"))) continue; // NOT_STARTED is represented by no row.
             User u = people.get(names.get(i)); DailyWorkReport r = new DailyWorkReport(u, LocalDate.of(2026, 8, day));
             r.update(summary(u), "Waiting for cross-team confirmation on one open item.", "Continue the planned verification and communicate any change in priority.");

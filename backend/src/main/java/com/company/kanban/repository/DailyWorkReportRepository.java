@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DailyWorkReportRepository extends JpaRepository<DailyWorkReport, Long> {
     Optional<DailyWorkReport> findByUserIdAndReportDate(Long userId, LocalDate date);
     List<DailyWorkReport> findByReportDate(LocalDate date);
+    List<DailyWorkReport> findByReportDateBetween(LocalDate start, LocalDate end);
 }

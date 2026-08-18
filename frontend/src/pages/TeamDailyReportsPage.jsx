@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
+import WeeklyReportPage from "./WeeklyReportPage";
+import ReportCalendar from "../components/ReportCalendar";
+import { ReportSkeleton } from "../components/ReportSkeleton";
 
 const API = "http://localhost:8080";
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
@@ -14,6 +17,10 @@ export default function TeamDailyReportsPage({ user, departments, onOpenReport, 
   const [state, setState] = useState("loading");
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [mode, setMode] = useState("daily");
+  const [availability, setAvailability] = useState({});
+  const [calendarMonth, setCalendarMonth] = useState(date.slice(0, 7));
+  useEffect(() => { let cancelled = false; apiFetch(`${API}/api/daily-reports/availability?month=${calendarMonth}${isAdmin ? `&departmentId=${departmentId}` : ""}`).then((r) => r.ok ? r.json() : []).then((rows) => { if (!cancelled) setAvailability(Object.fromEntries(rows.map((row) => [row.date, row.hasReports]))); }).catch(() => { if (!cancelled) setAvailability({}); }); return () => { cancelled = true; }; }, [calendarMonth, departmentId, isAdmin]);
   useEffect(() => {
     if (!departmentId) return;
     let cancelled = false;
@@ -23,7 +30,8 @@ export default function TeamDailyReportsPage({ user, departments, onOpenReport, 
       .catch((e) => { if (!cancelled) { setError(e.message); setState("error"); } });
     return () => { cancelled = true; };
   }, [date, departmentId, isAdmin]);
-  if (state === "loading") return <section className="dashboard-page"><p className="dashboard-status">Loading team reports...</p></section>;
+  if (mode === "weekly") return <><div className="report-tabs" role="tablist"><button role="tab" aria-selected="false" onClick={() => setMode("daily")}>Daily</button><button role="tab" aria-selected="true" className="is-active">Weekly</button></div><WeeklyReportPage user={user} departments={departments} initialDate={date} onBackToDaily={() => setMode("daily")} /></>;
+  if (state === "loading") return <><div className="report-tabs" role="tablist"><button role="tab" aria-selected="true" className="is-active">Daily</button><button role="tab" aria-selected="false" onClick={() => setMode("weekly")}>Weekly</button></div><ReportSkeleton /></>;
   if (state === "error") return <section className="dashboard-page"><p className="dashboard-error">{error}</p></section>;
   async function exportPdf() {
     setExporting(true); setError("");
@@ -35,7 +43,8 @@ export default function TeamDailyReportsPage({ user, departments, onOpenReport, 
     } catch (e) { setError(e.message); } finally { setExporting(false); }
   }
   return <section className="dashboard-page team-reports-page">
-    <div className="report-heading"><div><p className="eyebrow">Kovax FlowOps</p><h1>Daily Reports</h1><p>{niceDate(data.date)} · {data.departmentName} Department</p></div><div className="report-actions"><label className="date-control">Date <input type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} /></label>{isAdmin && <label className="date-control">Department <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}<button className="secondary-button" onClick={exportPdf} disabled={exporting}>{exporting ? "Generating…" : "Export Team PDF"}</button><button className="secondary-button" onClick={onOpenOwnReport}>My Daily Report</button></div></div>
+    <div className="report-tabs" role="tablist"><button role="tab" aria-selected="true" className="is-active">Daily</button><button role="tab" aria-selected="false" onClick={() => setMode("weekly")}>Weekly</button></div><div className="report-heading"><div><p className="eyebrow">Kovax FlowOps</p><h1>Daily Reports</h1><p>{niceDate(data.date)} · {data.departmentName} Department</p></div><div className="report-actions"><ReportCalendar value={date} onChange={setDate} availability={availability} onMonthChange={setCalendarMonth} />{isAdmin && <label className="date-control">Department <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}<button className="secondary-button" onClick={exportPdf} disabled={exporting || !data.reports.some((report) => report.status !== "NOT_STARTED")}>{exporting ? "Generating…" : "Export Team PDF"}</button><button className="secondary-button" onClick={onOpenOwnReport}>My Daily Report</button></div></div>
+    {!data.reports.some((report) => report.status !== "NOT_STARTED") && <p className="report-helper">No report data available for this date.</p>}
     {error && <p className="report-message">{error}</p>}
     <div className="team-report-summary"><strong>{data.submittedCount} / {data.reports.length} submitted</strong><span className="report-status submitted">Submitted {data.submittedCount}</span><span className="report-status draft">Draft {data.draftCount}</span><span className="report-status not_started">Not started {data.notStartedCount}</span></div>
     <div className="team-report-list">{data.reports.map((report) => <ReportCard key={report.userId} report={report} onOpen={() => onOpenReport(report.userId, date)} />)}</div>
