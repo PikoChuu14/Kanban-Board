@@ -27,19 +27,22 @@ public class BoardService {
     private final KanbanColumnRepository kanbanColumnRepository;
     private final TaskRepository taskRepository;
     private final AuthorizationService authorizationService;
+    private final NotificationService notificationService;
 
     public BoardService(
             BoardRepository boardRepository,
             DepartmentRepository departmentRepository,
             KanbanColumnRepository kanbanColumnRepository,
             TaskRepository taskRepository,
-            AuthorizationService authorizationService) {
+            AuthorizationService authorizationService,
+            NotificationService notificationService) {
 
         this.boardRepository = boardRepository;
         this.departmentRepository = departmentRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.taskRepository = taskRepository;
         this.authorizationService = authorizationService;
+        this.notificationService = notificationService;
     }
 
     public List<BoardResponse> getAllBoards(User currentUser) {
@@ -133,6 +136,8 @@ public class BoardService {
         kanbanColumnRepository.save(
                 new KanbanColumn("Done", 4, savedBoard)
         );
+
+        notificationService.notifyProjectCreated(savedBoard, currentUser);
 
         return toResponse(savedBoard);
     }

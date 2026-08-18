@@ -56,6 +56,20 @@ public class UserService {
                                 .toList();
         }
 
+    @Transactional(readOnly = true)
+    public List<UserResponse> getTaskAssignees(User currentUser) {
+        List<User> users;
+
+        if (currentUser.getRole() == Role.ADMIN) {
+            users = userRepository.findAll();
+        } else {
+            users = userRepository.findByDepartmentIdOrderByNameAsc(currentUser.getDepartment().getId())
+                    .stream().filter(user -> user.getRole() == Role.STAFF).toList();
+        }
+
+        return users.stream().map(this::toResponse).toList();
+    }
+
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() ->

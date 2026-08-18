@@ -5,6 +5,7 @@ import com.company.kanban.repository.BoardRepository;
 import com.company.kanban.repository.DailyWorkReportRepository;
 import com.company.kanban.repository.DepartmentRepository;
 import com.company.kanban.repository.KanbanColumnRepository;
+import com.company.kanban.repository.NotificationRepository;
 import com.company.kanban.repository.SnapshotBatchRepository;
 import com.company.kanban.repository.TaskRepository;
 import com.company.kanban.repository.TaskSnapshotRepository;
@@ -42,16 +43,17 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
     private final SnapshotBatchRepository batches;
     private final TaskSnapshotRepository snapshots;
     private final DailyWorkReportRepository reports;
+    private final NotificationRepository notifications;
 
     public KovaxDemoDataSeeder(@Value("${app.demo.reset-data:false}") boolean reset,
                                PasswordEncoder encoder, DepartmentRepository departments,
                                UserRepository users, BoardRepository boards,
                                KanbanColumnRepository columns, TaskRepository tasks,
                                SnapshotBatchRepository batches, TaskSnapshotRepository snapshots,
-                               DailyWorkReportRepository reports) {
+                               DailyWorkReportRepository reports, NotificationRepository notifications) {
         this.reset = reset; this.encoder = encoder; this.departments = departments; this.users = users;
         this.boards = boards; this.columns = columns; this.tasks = tasks; this.batches = batches;
-        this.snapshots = snapshots; this.reports = reports;
+        this.snapshots = snapshots; this.reports = reports; this.notifications = notifications;
     }
 
     @Override @Transactional public void run(String... args) {
@@ -61,9 +63,7 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
 
     protected void seed() {
         log.warn("DEMO MODE: resetting demo database.");
-        snapshots.deleteAllInBatch(); batches.deleteAllInBatch(); reports.deleteAllInBatch();
-        tasks.deleteAllInBatch(); columns.deleteAllInBatch(); boards.deleteAllInBatch();
-        users.deleteAllInBatch(); departments.deleteAllInBatch();
+        resetDemoData();
 
         Map<String, Department> dept = seedDepartments();
         Map<String, User> people = seedUsers(dept);
@@ -75,6 +75,15 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
         log.info("Demo counts: departments={}, users={}, boards={}, tasks={}, snapshotBatches={}, taskSnapshots={}, dailyReports={}, reviewTasks={}, overdueActiveTasks={}",
                 departments.count(), users.count(), boards.count(), tasks.count(), batches.count(), snapshots.count(), reports.count(),
                 tasks.findByStatusOrderBySubmittedForReviewAtAsc(TaskStatus.REVIEW).size(), overdueActiveCount(current));
+    }
+
+    void resetDemoData() {
+        // Notifications own a required foreign key to users, so they must be
+        // removed before the demo accounts are reset.
+        notifications.deleteAllInBatch();
+        snapshots.deleteAllInBatch(); batches.deleteAllInBatch(); reports.deleteAllInBatch();
+        tasks.deleteAllInBatch(); columns.deleteAllInBatch(); boards.deleteAllInBatch();
+        users.deleteAllInBatch(); departments.deleteAllInBatch();
     }
 
     private Map<String, Department> seedDepartments() {

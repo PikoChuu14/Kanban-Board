@@ -33,7 +33,8 @@ class BoardServiceUpdateTest {
             mock(DepartmentRepository.class),
             mock(KanbanColumnRepository.class),
             mock(TaskRepository.class),
-            new AuthorizationService()
+            new AuthorizationService(),
+            mock(NotificationService.class)
     );
 
     @Test

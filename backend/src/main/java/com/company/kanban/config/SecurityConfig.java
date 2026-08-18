@@ -64,7 +64,12 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         PathPatternRequestMatcher
                                                 .withDefaults()
-                                                .matcher(HttpMethod.GET, "/api/users/assignable")
+                                .matcher(HttpMethod.GET, "/api/users/assignable")
+                                ).authenticated()
+
+                                .requestMatchers(
+                                        PathPatternRequestMatcher.withDefaults()
+                                                .matcher(HttpMethod.GET, "/api/users/task-assignees")
                                 ).authenticated()
 
                                 .requestMatchers(

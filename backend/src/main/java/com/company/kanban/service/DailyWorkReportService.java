@@ -25,7 +25,8 @@ public class DailyWorkReportService {
     private final SnapshotBatchRepository batchRepository; private final TaskSnapshotRepository snapshotRepository;
     private final TaskRepository taskRepository;
     private final AuthorizationService authorizationService;
-    public DailyWorkReportService(DailyWorkReportRepository r, UserRepository u, SnapshotBatchRepository b, TaskSnapshotRepository s, TaskRepository t, AuthorizationService a) { reportRepository=r; userRepository=u; batchRepository=b; snapshotRepository=s; taskRepository=t; authorizationService=a; }
+    private final NotificationService notificationService;
+    public DailyWorkReportService(DailyWorkReportRepository r, UserRepository u, SnapshotBatchRepository b, TaskSnapshotRepository s, TaskRepository t, AuthorizationService a, NotificationService n) { reportRepository=r; userRepository=u; batchRepository=b; snapshotRepository=s; taskRepository=t; authorizationService=a; notificationService=n; }
     public LocalDate today() { return LocalDate.now(COMPANY_ZONE); }
 
     @Transactional
@@ -41,7 +42,10 @@ public class DailyWorkReportService {
         if (!date.equals(today())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only today's report can be submitted");
         DailyWorkReport report = reportRepository.findByUserIdAndReportDate(current.getId(), date).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Save a draft before submitting"));
         if (report.getStatus() == DailyWorkReportStatus.SUBMITTED) return report;
-        report.submit(); return reportRepository.save(report);
+        report.submit();
+        DailyWorkReport saved = reportRepository.save(report);
+        notificationService.notifyDailyReportSubmitted(saved, current);
+        return saved;
     }
     @Transactional(readOnly = true)
     public DailyReportViewResponse view(User current, Long targetId, LocalDate date) {

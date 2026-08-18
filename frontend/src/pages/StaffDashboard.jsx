@@ -43,7 +43,7 @@ function StaffDashboard({ user, refreshKey, onOpenKanban, onOpenReport }) {
   const statusCount = (status) => countStatus(tasks, status);
 
   return <section className="dashboard-page">
-    <div className="dashboard-hero"><div><h1 className="personal-greeting">{timeGreeting(user.name)}</h1><p className="greeting-subtitle">Here's what's happening with your work today.</p><p className="eyebrow">Personal dashboard</p><h2>My work today</h2></div><button className="primary-button" onClick={onOpenKanban}>Open My Kanban</button></div>
+    <div className="dashboard-hero"><div><h1 className="personal-greeting">{timeGreeting(user.name)}</h1></div><button className="primary-button" onClick={onOpenKanban}>Open My Kanban</button></div>
     <div className="kpi-grid">
       <Kpi label="Active workload" value={activeWorkload(tasks)} detail="Draft, Doing and Review" />
       <Kpi label="Doing" value={statusCount("DOING")} detail="In progress now" />

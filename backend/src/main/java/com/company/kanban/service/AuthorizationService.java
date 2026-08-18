@@ -140,6 +140,13 @@ public class AuthorizationService {
 
             throw forbidden();
         }
+
+        if (currentUser.getRole() == Role.STAFF && assignee.getRole() != Role.STAFF) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Staff can only assign tasks to staff in their department"
+            );
+        }
     }
 
     public void requireTaskReassignmentAccess(User currentUser, Task task, User assignee) {

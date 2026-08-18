@@ -52,7 +52,6 @@ function App() {
   const isManager = user?.role === "MANAGER";
   const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
-  const canViewProjectBoard = isAdmin || isManager;
   const [activeView, setActiveView] = useState("dashboard");
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [staffRefreshKey, setStaffRefreshKey] = useState(0);
@@ -134,6 +133,9 @@ function App() {
       return;
     }
 
+    // Permission errors are handled silently in the workspace. Clear any
+    // stale message when switching accounts or roles.
+    setPermissionMessage("");
     setActiveView("dashboard");
   }, [isAuthenticated, user]);
 
@@ -234,7 +236,7 @@ function App() {
 
     async function loadAssignableUsers() {
       try {
-        const response = await apiFetch(`${API_BASE_URL}/api/users/assignable`);
+        const response = await apiFetch(`${API_BASE_URL}/api/users/task-assignees`);
 
         if (!response.ok) {
           throw new Error(`Assignable users request failed (${response.status}).`);
@@ -620,16 +622,25 @@ function App() {
         if (view === "report") { setSelectedReportUserId(null); setSelectedReportDate(null); }
         setActiveView(view);
       }}
+      onNotificationNavigate={(notification) => {
+        if (notification.type === "TASK_REVIEW_SUBMITTED") {
+          setActiveView("reviews");
+        } else if (notification.type === "TASK_REVIEW_RETURNED" || notification.type === "TASK_APPROVED") {
+          setActiveView("personal");
+        } else if (notification.type === "DAILY_REPORT_SUBMITTED") {
+          setSelectedReportUserId(null);
+          setSelectedReportDate(null);
+          setActiveView("report");
+        } else if (notification.boardId) {
+          setSelectedBoardId(notification.boardId);
+          setActiveView("project");
+        } else {
+          setActiveView("personal");
+        }
+      }}
       onLogout={logout}
     >
     <div className="app">
-      {permissionMessage && (
-        <div className="permission-message" role="alert">
-          {permissionMessage}
-          <button type="button" onClick={() => setPermissionMessage("")}>Dismiss</button>
-        </div>
-      )}
-
       {activeView === "reviews" ? (
         <ReviewQueuePage onRefresh={() => setStaffRefreshKey((currentKey) => currentKey + 1)} />
       ) : activeView === "history" ? (
@@ -883,6 +894,7 @@ function App() {
           isOpen
           column={selectedColumn}
           users={users}
+          user={user}
           onClose={closeCreateTaskModal}
           onCreated={async () => {
             setStaffRefreshKey((currentKey) => currentKey + 1);

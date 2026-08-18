@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 
 const API_BASE_URL = "http://localhost:8080";
@@ -12,10 +12,16 @@ const INITIAL_FORM = {
   workload: "3",
 };
 
-function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
+function CreateTaskModal({ isOpen, column, users, user, onClose, onCreated }) {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && user?.role === "STAFF") {
+      setFormData((current) => ({ ...current, assigneeId: String(user.userId) }));
+    }
+  }, [isOpen, user]);
 
   if (!isOpen || !column) {
     return null;
@@ -192,13 +198,17 @@ function CreateTaskModal({ isOpen, column, users, onClose, onCreated }) {
             value={formData.assigneeId}
             onChange={handleChange}
           >
-            <option value="">Unassigned</option>
+            {user?.role !== "STAFF" && <option value="">Unassigned</option>}
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name || user.email}
               </option>
             ))}
           </select>
+
+          {user?.role === "STAFF" && (
+            <small className="form-help">Created by {user.name || user.email}. Staff can assign to themselves or same-department staff.</small>
+          )}
 
           {error && (
             <p className="form-error" role="alert">

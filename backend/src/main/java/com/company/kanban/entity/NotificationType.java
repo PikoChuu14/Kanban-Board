@@ -1,0 +1,13 @@
+package com.company.kanban.entity;
+
+public enum NotificationType {
+    TASK_CREATED,
+    TASK_ASSIGNED,
+    TASK_UPDATED,
+    TASK_REASSIGNED,
+    TASK_REVIEW_SUBMITTED,
+    TASK_REVIEW_RETURNED,
+    TASK_APPROVED,
+    PROJECT_CREATED,
+    DAILY_REPORT_SUBMITTED
+}

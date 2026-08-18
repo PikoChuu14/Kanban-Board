@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import NotificationBell from "./NotificationBell";
 
 const icons = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
@@ -15,14 +16,16 @@ function Icon({ name, size = 19 }) {
   return <svg className="ui-icon" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icons[name]}</svg>;
 }
 
-function AppShell({ user, activeView, onNavigate, onLogout, children }) {
-  const [collapsed, setCollapsed] = useState(false);
+function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogout, children }) {
+  const [collapsed, setCollapsed] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const canSeeTeam = user?.role === "MANAGER" || user?.role === "ADMIN";
+  const canSeeProjects = canSeeTeam || user?.role === "STAFF";
   const items = [
     { id: "dashboard", label: "Dashboard", icon: "dashboard" },
     { id: "personal", label: "My Kanban", icon: "kanban" },
-    ...(canSeeTeam ? [{ id: "project", label: "Projects", icon: "projects" }, { id: "staff", label: "Team", icon: "team" }, { id: "reviews", label: "Reviews", icon: "reviews" }] : []),
+    ...(canSeeProjects ? [{ id: "project", label: "Projects", icon: "projects" }] : []),
+    ...(canSeeTeam ? [{ id: "staff", label: "Team", icon: "team" }, { id: "reviews", label: "Reviews", icon: "reviews" }] : []),
     { id: "report", label: user?.role === "STAFF" ? "Daily Report" : "Daily Reports", icon: "report" },
   ];
 
@@ -50,6 +53,7 @@ function AppShell({ user, activeView, onNavigate, onLogout, children }) {
       <button type="button" className="sidebar-collapse" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((value) => !value)}><Icon name="chevron" /><span>{collapsed ? "Expand" : "Collapse"}</span></button>
     </aside>
     <main className="app-main">
+      <NotificationBell onNavigate={onNotificationNavigate} />
       <header className="mobile-topbar"><button type="button" className="btn-icon" aria-label="Open navigation" onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button><div className="mobile-brand"><div className="brand-mark">K<span /></div><strong>Kovax FlowOps</strong></div><div className="avatar">{user?.name?.slice(0, 1)?.toUpperCase() || "K"}</div></header>
       <div className="app-content">{children}</div>
     </main>

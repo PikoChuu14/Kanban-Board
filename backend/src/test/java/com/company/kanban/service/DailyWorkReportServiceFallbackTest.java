@@ -40,7 +40,7 @@ class DailyWorkReportServiceFallbackTest {
         ReflectionTestUtils.setField(staff, "id", 20L);
         board = new Board("Prototype", "", department);
         ReflectionTestUtils.setField(board, "id", 30L);
-        service = new DailyWorkReportService(reports, users, batches, snapshots, tasks, mock(AuthorizationService.class));
+        service = new DailyWorkReportService(reports, users, batches, snapshots, tasks, mock(AuthorizationService.class), mock(NotificationService.class));
         when(users.findById(20L)).thenReturn(Optional.of(staff));
         when(reports.findByUserIdAndReportDate(eq(20L), any())).thenReturn(Optional.empty());
     }

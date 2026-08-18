@@ -209,6 +209,7 @@
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; display: flex; flex-direction: column; width: var(--sidebar-width); padding: 25px 14px 17px; border-right: 1px solid #e7edf5; background: var(--color-surface); transition: width 220ms ease; }
 .sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); }
 .sidebar-brand { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 10px; margin-bottom: 39px; white-space: nowrap; }
+.app-shell:not(.sidebar-collapsed) .sidebar-brand { margin-bottom: 19px; }
 .brand-mark { position: relative; display: grid; place-items: center; width: 35px; height: 35px; flex: 0 0 35px; overflow: hidden; border-radius: 10px; background: var(--color-primary-dark); color: #fff; font-size: 20px; font-weight: 850; letter-spacing: -.08em; box-shadow: 0 5px 12px rgba(37, 99, 235, .22); }
 .brand-mark span { position: absolute; right: -7px; bottom: 3px; width: 22px; height: 9px; border-radius: 99px; background: #5c9cff; transform: rotate(-28deg); }
 .brand-copy { display: flex; flex-direction: column; line-height: 1.08; overflow: hidden; transition: opacity 150ms ease; }
@@ -236,8 +237,36 @@
 .sidebar-collapsed .sidebar-collapse .ui-icon { transform: rotate(180deg); }
 .app-main { min-height: 100vh; margin-left: var(--sidebar-width); transition: margin-left 220ms ease; }
 .sidebar-collapsed + .app-main { margin-left: var(--sidebar-collapsed-width); }
-.app-content { min-width: 0; padding: 38px clamp(22px, 4vw, 56px); }
+.app-content { min-width: 0; padding: 76px clamp(22px, 4vw, 56px) 38px; }
 .mobile-topbar, .sidebar-overlay { display: none; }
+
+.notification-dock { position: fixed; z-index: 45; top: 22px; right: clamp(22px, 4vw, 56px); }
+.notification-bell { position: relative; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; color: var(--color-text); box-shadow: var(--shadow-sm); cursor: pointer; }
+.notification-bell:hover, .notification-bell:focus-visible { border-color: #a9c2f6; color: var(--color-primary); outline: none; }
+.notification-badge { position: absolute; top: -6px; right: -7px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border: 2px solid #fff; border-radius: 999px; background: var(--color-primary); color: #fff; font-size: 10px; font-weight: 800; }
+.notification-panel { position: absolute; top: 50px; right: 0; width: min(390px, calc(100vw - 32px)); overflow: hidden; border: 1px solid var(--color-border); border-radius: 16px; background: #fff; color: var(--color-text); box-shadow: 0 18px 48px rgba(23, 43, 77, .18); }
+.notification-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px 18px 12px; }
+.notification-panel-header h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.notification-tabs { display: flex; gap: 3px; padding: 3px; border-radius: 9px; background: #f1f5fa; }
+.notification-tabs button { padding: 5px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--color-text-muted); font-size: 11px; font-weight: 750; cursor: pointer; }
+.notification-tabs button.is-active { background: #fff; color: var(--color-primary); box-shadow: 0 1px 4px rgba(23, 43, 77, .1); }
+.notification-actions { display: flex; justify-content: flex-end; gap: 5px; padding: 0 13px 10px; border-bottom: 1px solid var(--color-border); }
+.notification-actions button { padding: 5px 7px; border: 0; background: transparent; color: var(--color-primary); font-size: 11px; font-weight: 700; cursor: pointer; }
+.notification-actions button:disabled { color: #a8b1c0; cursor: default; }
+.notification-list { max-height: 460px; overflow-y: auto; overscroll-behavior: contain; }
+.notification-item { position: relative; display: grid; grid-template-columns: 9px minmax(0, 1fr) 24px; gap: 8px; width: 100%; padding: 14px 10px 14px 14px; border: 0; border-bottom: 1px solid #edf1f6; background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.notification-item:hover { background: #f8faff; }
+.notification-item.is-unread { background: #f1f6ff; }
+.notification-unread-dot { width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: transparent; }
+.notification-item.is-unread .notification-unread-dot { background: var(--color-primary); }
+.notification-item-copy { display: grid; gap: 4px; min-width: 0; }
+.notification-item-copy strong { font-size: 13px; font-weight: 650; }
+.notification-item.is-unread .notification-item-copy strong { font-weight: 800; }
+.notification-item-copy > span { color: #53627a; font-size: 12px; line-height: 1.42; }
+.notification-item-copy time { color: #8a96a9; font-size: 10px; }
+.notification-clear { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; color: #8b96a8; font-size: 19px; line-height: 1; }
+.notification-clear:hover, .notification-clear:focus-visible { background: #e6edf7; color: var(--color-text); outline: none; }
+.notification-empty { margin: 0; padding: 42px 20px; color: var(--color-text-muted); font-size: 13px; text-align: center; }
 
 .app { min-height: auto; padding: 0; background: transparent; color: var(--color-text); }
 .user-toolbar, .view-toolbar { display: none; }
@@ -1000,6 +1029,7 @@
 .dashboard-hero { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin: 8px 0 28px; }
 .dashboard-hero h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1px; }
 .dashboard-hero p:not(.eyebrow) { margin: 0; color: #aeb6c4; }
+.dashboard-hero .greeting-subtitle { margin-bottom: 0; }
 .eyebrow { margin: 0 0 8px; color: #73a4ff; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
 .kpi-card { min-height: 112px; padding: 17px; border: 1px solid #303641; border-radius: 14px; background: linear-gradient(145deg, #1d222b, #181b21); }
@@ -1204,6 +1234,11 @@
 @media (max-width: 640px) {
   .app-shell { display: block; }
   .app-main, .sidebar-collapsed + .app-main { width: 100%; }
+  .app-content { padding-top: 28px; }
+  .notification-dock { top: 9px; right: 55px; }
+  .notification-bell { width: 40px; height: 40px; border-color: transparent; box-shadow: none; }
+  .notification-panel { position: fixed; top: 58px; right: 10px; left: 10px; width: auto; max-height: calc(100vh - 72px); }
+  .notification-list { max-height: calc(100vh - 190px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-shell { transition: none; }

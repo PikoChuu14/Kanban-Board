@@ -21,7 +21,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TaskService {
@@ -30,17 +32,20 @@ public class TaskService {
     private final KanbanColumnRepository kanbanColumnRepository;
     private final UserRepository userRepository;
     private final AuthorizationService authorizationService;
+    private final NotificationService notificationService;
 
     public TaskService(
             TaskRepository taskRepository,
             KanbanColumnRepository kanbanColumnRepository,
             UserRepository userRepository,
-            AuthorizationService authorizationService) {
+            AuthorizationService authorizationService,
+            NotificationService notificationService) {
 
         this.taskRepository = taskRepository;
         this.kanbanColumnRepository = kanbanColumnRepository;
         this.userRepository = userRepository;
         this.authorizationService = authorizationService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -96,7 +101,9 @@ public class TaskService {
                         );
         authorizationService.requireColumnAccess(currentUser, column);
 
-        User assignee = null;
+        User assignee = currentUser.getRole() == com.company.kanban.entity.Role.STAFF
+                ? currentUser
+                : null;
 
         if (request.assigneeId() != null) {
             assignee = userRepository
@@ -132,6 +139,8 @@ public class TaskService {
 
         Task savedTask = taskRepository.save(task);
 
+        notificationService.notifyTaskAssigned(savedTask, currentUser);
+
         return toResponse(savedTask);
     }
 
@@ -150,6 +159,12 @@ public class TaskService {
                 );
         authorizationService.requireTaskAccess(currentUser, task);
 
+        User oldAssignee = task.getAssignee();
+        String oldTitle = task.getTitle();
+        String oldDescription = task.getDescription();
+        var oldPriority = task.getPriority();
+        var oldDueDate = task.getDueDate();
+        Integer oldWorkload = task.getWorkload();
         User assignee = null;
 
         if (request.assigneeId() != null) {
@@ -176,6 +191,18 @@ public class TaskService {
         task.setWorkload(request.workload());
 
         Task savedTask = taskRepository.save(task);
+
+        if (!Objects.equals(oldAssignee == null ? null : oldAssignee.getId(), assignee == null ? null : assignee.getId())) {
+            if (assignee != null) notificationService.notifyTaskReassigned(savedTask, oldAssignee, assignee, currentUser);
+        } else {
+            List<String> changes = new ArrayList<>();
+            if (!Objects.equals(oldTitle, request.title())) changes.add("Title");
+            if (!Objects.equals(oldDescription, request.description())) changes.add("Description");
+            if (!Objects.equals(oldPriority, request.priority())) changes.add("Priority");
+            if (!Objects.equals(oldDueDate, request.dueDate())) changes.add("Due date");
+            if (!Objects.equals(oldWorkload, request.workload())) changes.add("Workload");
+            if (!changes.isEmpty()) notificationService.notifyTaskUpdated(savedTask, currentUser, String.join(", ", changes));
+        }
 
         return toResponse(savedTask);
     }
@@ -233,6 +260,7 @@ public class TaskService {
                 )
         );
 
+        TaskStatus previousStatus = task.getStatus();
         task.setColumn(targetColumn);
         task.setStatus(statusFromColumn(targetColumn));
         if (task.getStatus() == TaskStatus.REVIEW) task.setSubmittedForReviewAt(java.time.LocalDateTime.now());
@@ -263,6 +291,10 @@ public class TaskService {
             }
 
             taskRepository.saveAll(sourceTasks);
+        }
+
+        if (previousStatus != TaskStatus.REVIEW && task.getStatus() == TaskStatus.REVIEW) {
+            notificationService.notifyReviewSubmitted(task, currentUser);
         }
 
         return toResponse(task);
@@ -303,6 +335,7 @@ public class TaskService {
                 Math.min(request.targetPosition(), targetTasks.size() + 1)
         );
 
+        TaskStatus previousStatus = task.getStatus();
         task.setColumn(targetColumn);
         task.setStatus(request.status());
         if (request.status() == TaskStatus.REVIEW) task.setSubmittedForReviewAt(java.time.LocalDateTime.now());
@@ -316,6 +349,10 @@ public class TaskService {
                     .findByColumnIdOrderByPositionAsc(sourceColumn.getId());
             normalizePositions(sourceTasks);
             taskRepository.saveAll(sourceTasks);
+        }
+
+        if (previousStatus != TaskStatus.REVIEW && request.status() == TaskStatus.REVIEW) {
+            notificationService.notifyReviewSubmitted(task, currentUser);
         }
 
         return toResponse(task);
@@ -368,6 +405,8 @@ public class TaskService {
         normalizePositions(sourceTasks);
         taskRepository.saveAll(sourceTasks);
 
+        notificationService.notifyReviewResult(task, currentUser, request.action() == ReviewAction.APPROVE);
+
         return toResponse(task);
     }
 
@@ -392,8 +431,12 @@ public class TaskService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assignee not found"));
 
         authorizationService.requireTaskReassignmentAccess(currentUser, task, assignee);
+        User oldAssignee = task.getAssignee();
+        if (oldAssignee != null && oldAssignee.getId().equals(assignee.getId())) return toResponse(task);
         task.setAssignee(assignee);
-        return toResponse(taskRepository.save(task));
+        Task saved = taskRepository.save(task);
+        notificationService.notifyTaskReassigned(saved, oldAssignee, assignee, currentUser);
+        return toResponse(saved);
     }
 
     @Transactional

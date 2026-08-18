@@ -29,6 +29,14 @@ public class UserController {
         return userService.getAssignableUsers(currentUser);
     }
 
+    @GetMapping("/task-assignees")
+    @PreAuthorize("isAuthenticated()")
+    public List<UserResponse> getTaskAssignees(
+            @AuthenticationPrincipal User currentUser
+    ) {
+        return userService.getTaskAssignees(currentUser);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getAllUsers() {

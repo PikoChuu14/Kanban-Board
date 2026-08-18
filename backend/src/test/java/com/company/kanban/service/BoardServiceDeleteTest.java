@@ -32,7 +32,8 @@ class BoardServiceDeleteTest {
             mock(DepartmentRepository.class),
             kanbanColumnRepository,
             taskRepository,
-            new AuthorizationService()
+            new AuthorizationService(),
+            mock(NotificationService.class)
     );
 
     @Test

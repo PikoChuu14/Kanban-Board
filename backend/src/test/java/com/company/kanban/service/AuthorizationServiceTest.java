@@ -99,6 +99,27 @@ class AuthorizationServiceTest {
     }
 
     @Test
+    void staffCanAssignSameDepartmentStaffButNotManagers() {
+        Department department = mock(Department.class);
+        when(department.getId()).thenReturn(10L);
+
+        User staff = mock(User.class);
+        when(staff.getRole()).thenReturn(Role.STAFF);
+        when(staff.getDepartment()).thenReturn(department);
+
+        User teammate = mock(User.class);
+        when(teammate.getRole()).thenReturn(Role.STAFF);
+        when(teammate.getDepartment()).thenReturn(department);
+        assertDoesNotThrow(() -> authorizationService.requireAssignableUser(staff, teammate));
+
+        User manager = mock(User.class);
+        when(manager.getRole()).thenReturn(Role.MANAGER);
+        when(manager.getDepartment()).thenReturn(department);
+        assertThrows(ResponseStatusException.class, () ->
+                authorizationService.requireAssignableUser(staff, manager));
+    }
+
+    @Test
     void assigneeMustMatchTaskDepartment() {
         Department taskDepartment = mock(Department.class);
         when(taskDepartment.getId()).thenReturn(10L);
