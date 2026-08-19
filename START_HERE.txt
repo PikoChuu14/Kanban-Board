@@ -1,7 +1,7 @@
 FLOWOPS — START HERE
 
 FIRST-TIME INSTALLATION
-1. Copy FlowOps-Setup.exe to the Windows server.
+1. Copy the versioned FlowOps-Setup-<version>.exe file to the Windows server.
 2. Double-click the installer and follow the wizard.
 3. Enter the first administrator account when asked.
 4. Click Install, then open FlowOps.

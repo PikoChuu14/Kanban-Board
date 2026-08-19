@@ -1,3 +1,1 @@
-FlowOps
-Version: 1.1.0
-Build Date: 2026-08-18
+1.1.0

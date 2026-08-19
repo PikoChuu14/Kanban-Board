@@ -1,5 +1,7 @@
 #define AppName "FlowOps"
-#define AppVersion "1.0.0"
+#ifndef AppVersion
+  #error AppVersion must be supplied by scripts\build-installer.ps1
+#endif
 #define AppPublisher "FlowOps Contributors"
 ; Permanent product identity. Keep this value unchanged for every release.
 #define AppId "{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}"
@@ -11,18 +13,20 @@ AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\FlowOps
 DefaultGroupName=FlowOps
+SetupIconFile=FlowOps.ico
+UninstallDisplayIcon={app}\FlowOps.ico
 UsePreviousAppDir=no
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=FlowOps-Setup
+OutputBaseFilename=FlowOps-Setup-{#AppVersion}
 UninstallDisplayName=FlowOps
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-VersionInfoVersion={#AppVersion}.0
+VersionInfoVersion={#AppVersion}
 VersionInfoDescription=FlowOps installer
 
 [Files]
@@ -30,6 +34,7 @@ Source: "payload\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdi
 Source: "payload\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "payload\FlowOps.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "payload\FlowOps.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "FlowOps.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "payload\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "payload\prerequisites\postgresql-installer.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "scripts\detect-postgresql.ps1"; DestDir: "{tmp}"; Flags: dontcopy
@@ -48,14 +53,20 @@ Name: "{commonappdata}\FlowOps\backups"
 Name: "{commonappdata}\FlowOps\runtime"
 
 [Icons]
-Name: "{group}\Open FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"
+Name: "{group}\Open FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"
 Name: "{group}\Backup FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\backup-installed.ps1"""
 Name: "{group}\Restore FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\restore-installed.ps1"""
 Name: "{group}\FlowOps Documentation"; Filename: "{app}\docs"
-Name: "{commondesktop}\FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; Tasks: desktopicon
+Name: "{commondesktop}\FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
+
+[InstallDelete]
+; Remove shortcuts created by the pre-rebrand installer. Both names launch the
+; same FlowOps service, so retaining the legacy shortcut looks like a duplicate app.
+Type: files; Name: "{commondesktop}\Kovax FlowOps.lnk"
+Type: files; Name: "{userdesktop}\Kovax FlowOps.lnk"
 
 [UninstallRun]
 Filename: "{app}\FlowOps.exe"; Parameters: "stop"; Flags: runhidden waituntilterminated
@@ -518,9 +529,33 @@ function DetectInstalledFlowOps: Boolean;
 var VersionText: String; Key: String;
 begin
   Result := False; InstalledVersion := '';
-  Key := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}_is1';
-  if RegQueryStringValue(HKLM, Key, 'DisplayVersion', VersionText) then begin Result := True; InstalledVersion := VersionText; end;
-  if IsWin64 and RegQueryStringValue(HKLM32, Key, 'DisplayVersion', VersionText) then begin Result := True; if InstalledVersion = '' then InstalledVersion := VersionText; end;
+  Key := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{#AppId}_is1';
+  Log('Checking FlowOps uninstall key: ' + Key);
+  if IsWin64 then
+  begin
+    if RegQueryStringValue(HKLM64, Key, 'DisplayVersion', VersionText) then
+    begin
+      Result := True;
+      InstalledVersion := VersionText;
+      Log('Found 64-bit FlowOps uninstall entry');
+    end
+    else if RegKeyExists(HKLM64, Key) then
+    begin
+      Result := True;
+      Log('Found 64-bit FlowOps uninstall entry without DisplayVersion');
+    end;
+  end;
+  if RegQueryStringValue(HKLM32, Key, 'DisplayVersion', VersionText) then
+  begin
+    Result := True;
+    if InstalledVersion = '' then InstalledVersion := VersionText;
+    Log('Found 32-bit FlowOps uninstall entry');
+  end
+  else if RegKeyExists(HKLM32, Key) then
+  begin
+    Result := True;
+    Log('Found 32-bit FlowOps uninstall entry without DisplayVersion');
+  end;
   if FileExists(ExpandConstant('{autopf}\FlowOps\FlowOps.exe')) then Result := True;
   { Legacy pre-rebrand application wrapper detection. }
   if FileExists(ExpandConstant('{autopf}\Kovax FlowOps\KovaxFlowOps.exe')) then Result := True;

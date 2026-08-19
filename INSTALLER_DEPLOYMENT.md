@@ -4,7 +4,7 @@ The installer is built with Inno Setup 6. It installs the JAR and a private Java
 
 The service wrapper is WinSW. Place the approved `WinSW-x64.exe` at `installer\prerequisites\WinSW-x64.exe`; the build renames it to `FlowOps.exe` in the payload. The official PostgreSQL installer must be placed at `installer\prerequisites\postgresql-installer.exe` to enable the automatic PostgreSQL option. The repository does not download or silently fetch either binary.
 
-Run `scripts\build-installer.bat`. It builds React, packages the Spring Boot JAR, creates a trimmed Java runtime with `jlink`, prepares the payload, and calls `ISCC.exe`. Output is `dist\installer\FlowOps-Setup.exe`.
+Set the release version in `VERSION.txt`, then run `scripts\build-installer.bat`. It builds React, packages the Spring Boot JAR, creates a trimmed Java runtime with `jlink`, prepares the payload, and calls `ISCC.exe`. For version `1.1.0`, the output is `dist\installer\FlowOps-Setup-1.1.0.exe`.
 
 The wizard detects PostgreSQL services or `psql.exe`. For an existing server it collects administrator credentials only during setup. For automatic PostgreSQL installation it uses the official prerequisite and a generated temporary postgres password. A fresh install creates `flowops` and `flowops_user`, generates the application DB password and JWT secret, writes protected ProgramData config, creates the first admin bootstrap values, and deletes temporary admin/setup files. An upgrade reads the retained configuration and continues using its existing database name, user, password, and JWT secret.
 
