@@ -1,6 +1,7 @@
 package com.company.kanban.config;
 
 import com.company.kanban.security.JwtAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -13,10 +14,38 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.HEAD;
+import static org.springframework.http.HttpMethod.POST;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final String[] PUBLIC_FRONTEND_PATHS = {
+            "/",
+            "/index.html",
+            "/assets/**",
+            "/favicon.ico",
+            "/favicon/**",
+            "/favicon.svg",
+            "/manifest.json",
+            "/manifest.webmanifest",
+            "/robots.txt",
+            "/icons/**",
+            "/icons.svg",
+            "/service-worker.js",
+            "/sw.js",
+            "/login",
+            "/dashboard",
+            "/projects",
+            "/reports",
+            "/history",
+            "/admin",
+            "/manager",
+            "/staff"
+    };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
@@ -41,6 +70,12 @@ public class SecurityConfig {
 
                 .httpBasic(AbstractHttpConfigurer::disable)
 
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, exception) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+                        )
+                )
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
@@ -52,8 +87,20 @@ public class SecurityConfig {
                                 .requestMatchers(
                                         PathPatternRequestMatcher
                                                 .withDefaults()
-                                                .matcher("/api/auth/login")
+                                                .matcher(POST, "/api/auth/login")
                                 ).permitAll()
+
+                                .requestMatchers(
+                                        PathPatternRequestMatcher
+                                                .withDefaults()
+                                                .matcher(GET, "/api/health")
+                                ).permitAll()
+
+                                .requestMatchers(frontendMatchers(GET))
+                                .permitAll()
+
+                                .requestMatchers(frontendMatchers(HEAD))
+                                .permitAll()
 
                                 .requestMatchers(
                                         PathPatternRequestMatcher
@@ -87,5 +134,14 @@ public class SecurityConfig {
                 );
 
         return http.build();
+    }
+
+    private static PathPatternRequestMatcher[] frontendMatchers(HttpMethod method) {
+        PathPatternRequestMatcher.Builder builder =
+                PathPatternRequestMatcher.withDefaults();
+
+        return java.util.Arrays.stream(PUBLIC_FRONTEND_PATHS)
+                .map(path -> builder.matcher(method, path))
+                .toArray(PathPatternRequestMatcher[]::new);
     }
 }

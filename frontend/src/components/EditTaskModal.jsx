@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 
 function EditTaskModal({ task, users, onClose, onTaskUpdated, onDelete, canDelete }) {
   const [title, setTitle] = useState(task?.title || "");

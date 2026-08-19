@@ -8,7 +8,7 @@ import {
 import { apiFetch } from "../api/apiFetch";
 
 const AuthContext = createContext(null);
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem("token"));

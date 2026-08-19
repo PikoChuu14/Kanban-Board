@@ -4,7 +4,7 @@ import WeeklyReportPage from "./WeeklyReportPage";
 import ReportCalendar from "../components/ReportCalendar";
 import { ReportSkeleton } from "../components/ReportSkeleton";
 
-const API = "http://localhost:8080";
+const API = "";
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
 const niceDate = (value) => new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const label = (s) => s === "NOT_STARTED" ? "Not started" : s === "SUBMITTED" ? "Submitted" : "Draft";

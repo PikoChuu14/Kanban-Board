@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 
 function EditBoardModal({ board, onClose, onUpdated }) {
   const [formData, setFormData] = useState({

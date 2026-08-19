@@ -21,7 +21,7 @@ function ManagerDashboard({ user, refreshKey, onViewKanban, onViewProject, onOpe
           getJson("/api/tasks/my", apiFetch),
           getJson("/api/history/dates", apiFetch).catch(() => []),
         ]);
-        const reportResponse = await apiFetch(`http://localhost:8080/api/daily-reports/team/status?date=${malaysiaToday()}`);
+        const reportResponse = await apiFetch(`/api/daily-reports/team/status?date=${malaysiaToday()}`);
         const reportData = reportResponse.ok ? await reportResponse.json() : [];
         const [staffTasks, teamBoards] = await Promise.all([
           Promise.all(team.map((staff) => getJson(`/api/tasks/user/${staff.userId}`, apiFetch))),
@@ -40,7 +40,7 @@ function ManagerDashboard({ user, refreshKey, onViewKanban, onViewProject, onOpe
   }, [refreshKey]);
 
   async function reviewAction(task, action) {
-    const response = await apiFetch(`http://localhost:8080/api/tasks/${task.id}/review-action`, { method: "PUT", body: JSON.stringify({ action }) });
+    const response = await apiFetch(`/api/tasks/${task.id}/review-action`, { method: "PUT", body: JSON.stringify({ action }) });
     if (!response.ok) return;
     setTasks((current) => current.map((candidate) => candidate.id === task.id ? { ...candidate, status: action === "APPROVE" ? "DONE" : "DOING" } : candidate));
     setWorkload((current) => current.map((staff) => {

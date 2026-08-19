@@ -1,0 +1,7 @@
+# Kovax FlowOps Configuration
+server.port=8080
+spring.datasource.url=jdbc:postgresql://localhost:5432/kovax_flowops
+spring.datasource.username=kovax_user
+spring.datasource.password=CHANGE_ME
+app.base-url=http://localhost:8080
+app.mail.enabled=false

@@ -21,7 +21,7 @@ import TeamDailyReportsPage from "./pages/TeamDailyReportsPage";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 const DRAG_START_THRESHOLD = 6;
 
 function TaskCardContent({ task }) {

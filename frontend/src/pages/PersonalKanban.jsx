@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 const DRAG_START_THRESHOLD = 6;
 
 const STATUSES = [

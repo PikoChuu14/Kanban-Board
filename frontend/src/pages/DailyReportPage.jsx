@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
-const API = "http://localhost:8080";
+  const API = "";
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
 const niceDate = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
 function statusLabel(status) { return status === "SUBMITTED" ? "Submitted" : status === "DRAFT" ? "Draft" : "Not started"; }

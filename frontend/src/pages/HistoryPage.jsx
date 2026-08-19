@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 const STATUSES = [
   { value: "DRAFT", label: "Draft" },
   { value: "DOING", label: "Doing" },

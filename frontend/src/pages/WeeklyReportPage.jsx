@@ -3,7 +3,7 @@ import { apiFetch } from "../api/apiFetch";
 import ReportCalendar from "../components/ReportCalendar";
 import { ReportSkeleton } from "../components/ReportSkeleton";
 
-const API = "http://localhost:8080";
+const API = "";
 const zone = "Asia/Kuala_Lumpur";
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(new Date());
 const monday = (value) => { const d = new Date(`${value}T00:00:00`); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return d.toISOString().slice(0, 10); };

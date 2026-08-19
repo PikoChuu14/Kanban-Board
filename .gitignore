@@ -21,3 +21,16 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+config/application.properties
+config/secrets.properties
+config/pgpass.conf
+logs/
+backups/
+run/
+dist/
+installer/payload/
+dist/installer/
+backend/target/
+frontend/dist/
+frontend/node/
+backend/config/dev-secrets.properties

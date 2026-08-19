@@ -1,0 +1,15 @@
+KOVAX FLOWOPS — START HERE
+
+FIRST-TIME INSTALLATION
+1. Copy KovaxFlowOps-Setup.exe to the Windows server.
+2. Double-click the installer and follow the wizard.
+3. Enter the first administrator account when asked.
+4. Click Install, then open Kovax FlowOps.
+
+NORMAL USE
+Kovax FlowOps starts automatically with Windows.
+Open: http://SERVER-IP:8080
+Backup: Start Menu → Kovax FlowOps → Backup Kovax FlowOps
+Restore: Start Menu → Kovax FlowOps → Restore Kovax FlowOps
+
+Laragon comparison: start.bat is like Start All; stop.bat is like Stop All; pgAdmin is like phpMyAdmin; application.properties is like .env.

@@ -1,0 +1,12 @@
+<service>
+  <id>KovaxFlowOps</id>
+  <name>Kovax FlowOps</name>
+  <description>Kovax FlowOps work management system</description>
+  <executable>%BASE%\runtime\bin\java.exe</executable>
+  <arguments>-jar "%BASE%\app\kovax-flowops.jar" --spring.profiles.active=prod "--spring.config.additional-location=optional:file:C:/ProgramData/Kovax FlowOps/config/" "--spring.config.import=optional:file:C:/ProgramData/Kovax FlowOps/config/secrets.properties" "--logging.file.name=C:/ProgramData/Kovax FlowOps/logs/kovax-flowops.log"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+  <logpath>C:\ProgramData\Kovax FlowOps\logs</logpath>
+  <log mode="append" />
+  <onfailure action="restart" delay="10 sec" />
+  <startmode>Automatic</startmode>
+</service>

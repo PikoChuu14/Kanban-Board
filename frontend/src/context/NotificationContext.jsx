@@ -3,7 +3,7 @@ import { apiFetch } from "../api/apiFetch";
 import { useAuth } from "./AuthContext";
 
 const NotificationContext = createContext(null);
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "";
 
 export function NotificationProvider({ children }) {
   const { isAuthenticated, user } = useAuth();
