@@ -34,3 +34,6 @@ backend/target/
 frontend/dist/
 frontend/node/
 backend/config/dev-secrets.properties
+backend/mvn-test.log
+backend/testresult.txt
+*.log
