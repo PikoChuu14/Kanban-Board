@@ -38,11 +38,13 @@ public class SecurityConfig {
             "/service-worker.js",
             "/sw.js",
             "/login",
+            "/activate",
             "/dashboard",
             "/projects",
             "/reports",
             "/history",
             "/admin",
+            "/admin/**",
             "/manager",
             "/staff"
     };
@@ -89,6 +91,8 @@ public class SecurityConfig {
                                                 .withDefaults()
                                                 .matcher(POST, "/api/auth/login")
                                 ).permitAll()
+
+                                .requestMatchers(PathPatternRequestMatcher.withDefaults().matcher(POST, "/api/auth/activate")).permitAll()
 
                                 .requestMatchers(
                                         PathPatternRequestMatcher

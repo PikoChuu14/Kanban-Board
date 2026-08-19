@@ -22,6 +22,13 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "varchar(32) default 'ACTIVE'")
+    private AccountStatus status = AccountStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    private AccountStatus statusBeforeDisabled;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
 
@@ -31,6 +38,9 @@ public class User {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false, columnDefinition = "timestamp default CURRENT_TIMESTAMP")
+    private LocalDateTime updatedAt;
 
     public User() {
     }
@@ -48,6 +58,7 @@ public class User {
         this.role = role;
         this.department = department;
         this.createdAt = LocalDateTime.now();
+        this.updatedAt = this.createdAt;
     }
 
     @PrePersist
@@ -55,7 +66,12 @@ public class User {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        if (status == null) status = AccountStatus.ACTIVE;
+        if (updatedAt == null) updatedAt = createdAt;
     }
+
+    @PreUpdate
+    protected void onUpdate() { updatedAt = LocalDateTime.now(); }
 
     public Long getId() {
         return id;
@@ -104,4 +120,10 @@ public class User {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public AccountStatus getStatus() { return status; }
+    public void setStatus(AccountStatus status) { this.status = status; }
+    public AccountStatus getStatusBeforeDisabled() { return statusBeforeDisabled; }
+    public void setStatusBeforeDisabled(AccountStatus statusBeforeDisabled) { this.statusBeforeDisabled = statusBeforeDisabled; }
 }

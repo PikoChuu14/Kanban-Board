@@ -18,6 +18,9 @@ import HistoryPage from "./pages/HistoryPage";
 import ReassignTaskModal from "./components/ReassignTaskModal";
 import DailyReportPage from "./pages/DailyReportPage";
 import TeamDailyReportsPage from "./pages/TeamDailyReportsPage";
+import UserManagementPage from "./pages/UserManagementPage";
+import DataManagementPage from "./pages/DataManagementPage";
+import ActivationPage from "./pages/ActivationPage";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
 
@@ -52,7 +55,8 @@ function App() {
   const isManager = user?.role === "MANAGER";
   const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
-  const [activeView, setActiveView] = useState("dashboard");
+  const initialView = window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : "dashboard";
+  const [activeView, setActiveView] = useState(initialView);
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [staffRefreshKey, setStaffRefreshKey] = useState(0);
   const [selectedReportUserId, setSelectedReportUserId] = useState(null);
@@ -136,7 +140,7 @@ function App() {
     // Permission errors are handled silently in the workspace. Clear any
     // stale message when switching accounts or roles.
     setPermissionMessage("");
-    setActiveView("dashboard");
+    setActiveView(window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : "dashboard");
   }, [isAuthenticated, user]);
 
   useEffect(() => {
@@ -605,6 +609,8 @@ function App() {
     }
   }
 
+  if (window.location.pathname === "/activate") return <ActivationPage />;
+
   if (loading) {
     return <div className="app-loading">Loading...</div>;
   }
@@ -621,9 +627,18 @@ function App() {
         if (view === "dashboard") setStaffRefreshKey((currentKey) => currentKey + 1);
         if (view === "report") { setSelectedReportUserId(null); setSelectedReportDate(null); }
         setActiveView(view);
+        const path=view==='users-admin'?'/admin/users':view==='data-management'?'/admin/settings/data-management':'/';
+        window.history.pushState({},'',path);
       }}
       onNotificationNavigate={(notification) => {
-        if (notification.type === "TASK_REVIEW_SUBMITTED") {
+        if (isAdmin) {
+          if (notification.boardId) {
+            setSelectedBoardId(notification.boardId);
+            setActiveView("project");
+          } else {
+            setActiveView("dashboard");
+          }
+        } else if (notification.type === "TASK_REVIEW_SUBMITTED") {
           setActiveView("reviews");
         } else if (notification.type === "TASK_REVIEW_RETURNED" || notification.type === "TASK_APPROVED") {
           setActiveView("personal");
@@ -641,7 +656,11 @@ function App() {
       onLogout={logout}
     >
     <div className="app">
-      {activeView === "reviews" ? (
+      {activeView === "users-admin" && isAdmin ? (
+        <UserManagementPage departments={departments} />
+      ) : activeView === "data-management" && isAdmin ? (
+        <DataManagementPage />
+      ) : activeView === "reviews" ? (
         <ReviewQueuePage onRefresh={() => setStaffRefreshKey((currentKey) => currentKey + 1)} />
       ) : activeView === "history" ? (
         <HistoryPage key={`${user?.userId}-${user?.role}`} user={user} users={users} departments={departments} />
@@ -659,8 +678,6 @@ function App() {
             user={user}
             departments={departments}
             refreshKey={staffRefreshKey}
-            onOpenReport={() => { setSelectedReportUserId(null); setSelectedReportDate(null); setActiveView("report"); }}
-            onOpenReviews={() => setActiveView("reviews")}
             onViewDepartment={(departmentId) => {
               setSelectedDepartmentId(departmentId);
               setSelectedStaffId("");

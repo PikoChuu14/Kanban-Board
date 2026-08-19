@@ -21,11 +21,11 @@ try {
 Write-Host '[2/6] Building Spring Boot JAR...'; Push-Location $backend; & .\mvnw.cmd -DskipTests clean package; if($LASTEXITCODE -ne 0){throw 'Backend package failed'}; Pop-Location
 Write-Host '[3/6] Preparing installer payload...'
 New-Item -ItemType Directory -Force -Path "$payload\app","$payload\tools","$payload\prerequisites" | Out-Null
-Copy-Item "$backend\target\kovax-flowops.jar" "$payload\app\kovax-flowops.jar" -Force
-Copy-Item "$installer\service.xml" "$payload\KovaxFlowOps.xml" -Force
-Copy-Item $winsw "$payload\KovaxFlowOps.exe" -Force
+Copy-Item "$backend\target\flowops.jar" "$payload\app\flowops.jar" -Force
+Copy-Item "$installer\FlowOps.xml" "$payload\FlowOps.xml" -Force
+Copy-Item $winsw "$payload\FlowOps.exe" -Force
 Copy-Item $postgresInstaller "$payload\prerequisites\postgresql-installer.exe" -Force
-Copy-Item "$installer\scripts\setup-database.ps1","$installer\scripts\jwt-secret.ps1","$installer\scripts\backup-installed.ps1","$installer\scripts\restore-installed.ps1","$installer\scripts\detect-postgresql.ps1","$installer\scripts\inspect-flowops.ps1","$installer\scripts\wait-for-ready.ps1" "$payload\tools" -Force
+Copy-Item "$installer\scripts\setup-database.ps1","$installer\scripts\jwt-secret.ps1","$installer\scripts\backup-installed.ps1","$installer\scripts\restore-installed.ps1","$installer\scripts\restore-request.ps1","$installer\scripts\detect-postgresql.ps1","$installer\scripts\inspect-flowops.ps1","$installer\scripts\wait-for-ready.ps1" "$payload\tools" -Force
 Write-Host '[OK]'
 Write-Host '[4/6] Creating private Java 21 runtime...'
 $runtimeDir = Join-Path $payload 'runtime'
@@ -34,8 +34,8 @@ if(Test-Path $runtimeDir){Remove-Item -Recurse -Force $runtimeDir}
 if($LASTEXITCODE -ne 0){throw 'jlink runtime creation failed'}
 if(-not (Test-Path (Join-Path $runtimeDir 'bin\java.exe'))){throw "jlink completed but runtime\bin\java.exe is missing: $runtimeDir"}
 Write-Host '[OK] runtime\bin\java.exe'
-Write-Host '[5/6] Compiling Inno Setup installer...'; & $iscc "$installer\KovaxFlowOps.iss"; if($LASTEXITCODE -ne 0){throw 'Inno Setup compilation failed'}
-$installerOutput = Join-Path $root 'dist\installer\KovaxFlowOps-Setup.exe'
+Write-Host '[5/6] Compiling Inno Setup installer...'; & $iscc "$installer\FlowOps.iss"; if($LASTEXITCODE -ne 0){throw 'Inno Setup compilation failed'}
+$installerOutput = Join-Path $root 'dist\installer\FlowOps-Setup.exe'
 if(-not (Test-Path -LiteralPath $installerOutput)){throw "Inno Setup reported success but the installer was not created: $installerOutput"}
 $installerTimestamp = (Get-Item -LiteralPath $installerOutput).LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss zzz')
 Write-Host '[6/6] Installer ready'

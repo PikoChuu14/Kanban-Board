@@ -262,7 +262,7 @@ public class DailyWorkReportService {
                         if (stream != null) stream.close();
                         PDPage page = new PDPage(PDRectangle.A4); document.addPage(page); pages.add(page);
                         stream = new PDPageContentStream(document, page); y = page.getMediaBox().getHeight() - 42;
-                        if (pages.size() == 1) { text(stream, "KOVAX FLOWOPS", 42, y, 9, true); y -= 18; text(stream, "Weekly Report", 42, y, 17, true); y -= 17; text(stream, report.departmentName() + " - " + report.weekStart() + " to " + report.weekEnd(), 42, y, 9, false); y -= 18; line(stream, 42, y, 553); y -= 16; text(stream, weeklyOverviewLine(report.overview()), 42, y, 7.6f, false); y -= 18; }
+                        if (pages.size() == 1) { text(stream, "FLOWOPS", 42, y, 9, true); y -= 18; text(stream, "Weekly Report", 42, y, 17, true); y -= 17; text(stream, report.departmentName() + " - " + report.weekStart() + " to " + report.weekEnd(), 42, y, 9, false); y -= 18; line(stream, 42, y, 553); y -= 16; text(stream, weeklyOverviewLine(report.overview()), 42, y, 7.6f, false); y -= 18; }
                     }
                     line(stream, 42, y, 553); y -= 13; text(stream, day.date().getDayOfWeek().name() + " - " + day.date(), 42, y, 10, true); y -= 13;
                     for (String line : lines) { text(stream, line, 50, y, line.endsWith("SUMMARY") || line.endsWith("BLOCKER") || line.endsWith("NEXT") || line.equals("TASKS") ? 8.2f : 8, line.endsWith("SUMMARY") || line.endsWith("BLOCKER") || line.endsWith("NEXT") || line.equals("TASKS")); y -= 10; }
@@ -282,7 +282,7 @@ public class DailyWorkReportService {
         DailyReportViewResponse v=view(current,userId,date);
         try (PDDocument document=new PDDocument(); ByteArrayOutputStream out=new ByteArrayOutputStream()) {
             PDPage page=new PDPage(PDRectangle.A4); document.addPage(page); float y=page.getMediaBox().getHeight()-48;
-            try(PDPageContentStream c=new PDPageContentStream(document,page)){ c.setNonStrokingColor(new Color(18,59,86)); text(c,"KOVAX FLOWOPS",48,y,16,true); y-=25; text(c,"Daily Work Report",48,y,22,true); y-=28; text(c,v.employee().userName()+" - "+v.employee().departmentName()+" - "+v.report().reportDate(),48,y,10,false); y-=25; line(c,48,y,547); y-=20; y=section(c,"Daily Summary",v.report().workSummary(),y); y=section(c,"Issues / Blockers",v.report().blockers(),y); y=section(c,"Next Working Day Plan",v.report().nextDayPlan(),y); y=activity(c,v,y); y=taskSection(c,"Completed Today",v.completedTasks(),y); y=taskSection(c,"In Review",v.reviewTasks(),y); taskSection(c,"Still Active",v.activeTasks(),y); }
+            try(PDPageContentStream c=new PDPageContentStream(document,page)){ c.setNonStrokingColor(new Color(18,59,86)); text(c,"FLOWOPS",48,y,16,true); y-=25; text(c,"Daily Work Report",48,y,22,true); y-=28; text(c,v.employee().userName()+" - "+v.employee().departmentName()+" - "+v.report().reportDate(),48,y,10,false); y-=25; line(c,48,y,547); y-=20; y=section(c,"Daily Summary",v.report().workSummary(),y); y=section(c,"Issues / Blockers",v.report().blockers(),y); y=section(c,"Next Working Day Plan",v.report().nextDayPlan(),y); y=activity(c,v,y); y=taskSection(c,"Completed Today",v.completedTasks(),y); y=taskSection(c,"In Review",v.reviewTasks(),y); taskSection(c,"Still Active",v.activeTasks(),y); }
             document.save(out); return out.toByteArray();
         } catch(Exception e){ throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Unable to generate PDF",e); }
     }
@@ -307,7 +307,7 @@ public class DailyWorkReportService {
                     y = page.getMediaBox().getHeight() - 42;
                     if (pages.size() == 1) {
                         stream.setNonStrokingColor(new Color(18, 59, 86));
-                        text(stream, "KOVAX FLOWOPS", 42, y, 9, true); y -= 18;
+                        text(stream, "FLOWOPS", 42, y, 9, true); y -= 18;
                         text(stream, "Department Daily Report", 42, y, 17, true); y -= 17;
                         text(stream, scope.departmentName() + " - " + date, 42, y, 9, false); y -= 18;
                         line(stream, 42, y, 553); y -= 16;
@@ -323,7 +323,7 @@ public class DailyWorkReportService {
             String generated = "Generated " + LocalDateTime.now(COMPANY_ZONE).format(DateTimeFormatter.ofPattern("dd MMM uuuu HH:mm", Locale.ENGLISH));
             for (int i = 0; i < pages.size(); i++) {
                 try (PDPageContentStream footer = new PDPageContentStream(document, pages.get(i), PDPageContentStream.AppendMode.APPEND, true)) {
-                    text(footer, "Kovax FlowOps - " + generated + " - Page " + (i + 1) + " of " + pages.size(), 42, 28, 7, false);
+                    text(footer, "FlowOps - " + generated + " - Page " + (i + 1) + " of " + pages.size(), 42, 28, 7, false);
                 }
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream(); document.save(out); return out.toByteArray();

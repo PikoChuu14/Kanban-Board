@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $backendRoot = Join-Path $projectRoot 'backend'
 
-Write-Host 'Starting Kovax FlowOps development backend on http://localhost:8081'
+Write-Host 'Starting FlowOps development backend on http://localhost:8081'
 Write-Host 'Profile: dev | Database: kanban_db | PostgreSQL role: postgres (override in backend/config/dev-secrets.properties)'
 
 Push-Location $backendRoot

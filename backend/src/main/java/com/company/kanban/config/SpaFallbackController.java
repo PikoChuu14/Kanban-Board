@@ -15,6 +15,9 @@ public class SpaFallbackController {
             "/reports",
             "/history",
             "/admin",
+            "/admin/users",
+            "/admin/settings/data-management",
+            "/activate",
             "/manager",
             "/staff"
     })

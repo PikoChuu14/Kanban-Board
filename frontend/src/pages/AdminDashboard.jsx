@@ -4,7 +4,7 @@ import { activeTasks, activeWorkload, countStatus, dueLabel, getJson, timeGreeti
 
 const WORKLOAD_COLORS = ["#3566b3", "#5f8fcf", "#6d829e", "#8b9bb0"];
 
-function AdminDashboard({ user, refreshKey, departments, onViewDepartment, onViewProject, onOpenReviews }) {
+function AdminDashboard({ user, refreshKey, departments, onViewDepartment, onViewProject }) {
   const [users, setUsers] = useState([]);
   const [boards, setBoards] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -20,7 +20,7 @@ function AdminDashboard({ user, refreshKey, departments, onViewDepartment, onVie
   if (state === "loading") return <section className="dashboard-page"><p className="dashboard-status">Loading company dashboard...</p></section>;
   if (state === "error") return <section className="dashboard-page"><div className="dashboard-error">Unable to load dashboard.</div></section>;
   const active = activeTasks(tasks); const review = tasks.filter((task) => task.status === "REVIEW"); const overdue = tasks.filter((task) => dueLabel(task) === "Overdue");
-  return <section className="dashboard-page"><div className="dashboard-hero"><div><h1 className="personal-greeting">{timeGreeting(user?.name)}</h1><p className="greeting-subtitle">Here's what's happening across the company today.</p></div><button className="secondary-button" onClick={onOpenReviews}>View Reviews</button></div>
+  return <section className="dashboard-page"><div className="dashboard-hero"><div><h1 className="personal-greeting">{timeGreeting(user?.name)}</h1><p className="greeting-subtitle">Here's what's happening across the company today.</p></div></div>
     <div className="kpi-grid"><Kpi label="Departments" value={departments.length} detail="Company-wide" /><Kpi label="Employees" value={users.length} detail="All roles" /><Kpi label="Active tasks" value={active.length} detail="Not done" /><Kpi label="Active workload" value={activeWorkload(tasks)} detail="Across departments" /><Kpi label="Waiting for review" value={review.length} detail="Operational queue" tone={review.length ? "warning" : ""} /><Kpi label="Overdue tasks" value={overdue.length} detail="Active tasks only" tone={overdue.length ? "warning" : ""} /></div>
     <div className="dashboard-columns admin-grid"><DashboardPanel title="Department overview"><div className="department-list">{departments.map((department) => { const departmentTasks = tasks.filter((task) => { const board = boards.find((candidate) => candidate.id === task.boardId); return board?.departmentId === department.id; }); const staffCount = users.filter((user) => user.departmentId === department.id && user.role === "STAFF").length; return <button className="department-row" key={department.id} onClick={() => onViewDepartment(department.id)}><span><strong>{department.name}</strong><small>{staffCount} staff · {departmentTasks.filter((task) => task.status !== "DONE").length} active tasks</small></span><span><b>{activeWorkload(departmentTasks)}</b> workload</span><span>{countStatus(departmentTasks, "REVIEW")} review · {departmentTasks.filter((task) => dueLabel(task) === "Overdue").length} overdue</span></button>; })}</div>{!departments.length && <Empty text="No departments available." />}</DashboardPanel>
       <DashboardPanel title="Company workload"><CompanyWorkloadChart departments={departments} boards={boards} tasks={tasks} /></DashboardPanel>

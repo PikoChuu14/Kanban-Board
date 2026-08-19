@@ -1,14 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-
-function BrandMark() {
-  return (
-    <div className="login-brand-mark" aria-hidden="true">
-      <span>K</span>
-      <span className="login-brand-mark-dot" />
-    </div>
-  );
-}
+import FlowOpsLogo from "./FlowOpsLogo";
 
 function MailIcon() {
   return (
@@ -80,9 +72,9 @@ function LoginPage() {
 
       <section className="login-card" aria-labelledby="login-heading">
         <div className="login-brand">
-          <BrandMark />
+          <FlowOpsLogo className="login-brand-mark" decorative />
           <div>
-            <p className="login-brand-name">Kovax <span>FlowOps</span></p>
+            <p className="login-brand-name">FlowOps</p>
             <p className="login-brand-tagline">Operational workflow and daily task tracking</p>
           </div>
         </div>
@@ -90,7 +82,7 @@ function LoginPage() {
         <div className="login-intro">
           <p className="login-eyebrow">Secure workspace access</p>
           <h1 id="login-heading">Welcome back</h1>
-          <p>Sign in to continue to Kovax FlowOps</p>
+          <p>Sign in to continue to FlowOps</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
@@ -143,7 +135,7 @@ function LoginPage() {
         </form>
 
         <p className="login-help">Need help signing in? Contact your administrator.</p>
-        <p className="login-footer">For authorized Kovax personnel only.</p>
+        <p className="login-footer">For authorized users only.</p>
       </section>
     </main>
   );

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0.."
-set "INSTALLER_OUTPUT=%CD%\dist\installer\KovaxFlowOps-Setup.exe"
+set "INSTALLER_OUTPUT=%CD%\dist\installer\FlowOps-Setup.exe"
 if exist "%INSTALLER_OUTPUT%" del /f /q "%INSTALLER_OUTPUT%"
 if exist "%INSTALLER_OUTPUT%" (
   echo [ERROR] Could not remove previous installer: %INSTALLER_OUTPUT%

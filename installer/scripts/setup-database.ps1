@@ -56,20 +56,31 @@ GRANT ALL PRIVILEGES ON DATABASE "$($input.database)" TO "$($input.appUser)";
     # credentials. The earlier wizard probe can be inconclusive when retained
     # application credentials are unavailable or protected.
     $databaseExistsText = & $psql -h $input.host -p $input.port -U $input.adminUser -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$(SqlQuote ([string]$input.database))';" 2>> (Join-Path $logs 'installer-database.log')
-    if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL could not verify whether the existing Kovax FlowOps database is present.' }
+    if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL could not verify whether the existing FlowOps database is present.' }
     $databaseExists = (($databaseExistsText | Select-Object -First 1) | Out-String).Trim() -eq '1'
     Add-Content -Encoding utf8 (Join-Path $logs 'installer-database.log') "Database mode: new; live existing database check=$databaseExists"
     if ($databaseExists) {
       $pgDump = Find-PgTool 'pg_dump.exe'
       $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-      $backup = Join-Path $DataRoot ("backups\kovax_flowops_$stamp.backup")
+      $backup = Join-Path $DataRoot ("backups\flowops_$stamp.backup")
       & $pgDump -h $input.host -p $input.port -U $input.adminUser -d $input.database -Fc -f $backup *>> (Join-Path $logs 'installer-database.log')
-      if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $backup)) { throw 'The existing Kovax FlowOps database could not be backed up; no new database was created.' }
-      $archive = "kovax_flowops_backup_$stamp"
+      if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $backup)) { throw 'The existing FlowOps database could not be backed up; no new database was created.' }
+      $archive = "flowops_backup_$stamp"
       $renameSql = "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$(SqlQuote ([string]$input.database))' AND pid <> pg_backend_pid(); ALTER DATABASE `"$($input.database)`" RENAME TO `"$archive`";"
       & $psql -h $input.host -p $input.port -U $input.adminUser -d postgres -v ON_ERROR_STOP=1 -c $renameSql *>> (Join-Path $logs 'installer-database.log')
       if ($LASTEXITCODE -ne 0) { throw "The existing database backup was created at $backup, but the database could not be archived. No new database was created." }
       Add-Content -Encoding utf8 (Join-Path $logs 'installer-database.log') "Existing database archived as $archive; backup=$backup"
+      $metadataPath = Join-Path $DataRoot 'backups\backup-metadata.json'
+      $metadata = @{}
+      if (Test-Path -LiteralPath $metadataPath) {
+        $existingMetadata = Get-Content -Raw -LiteralPath $metadataPath | ConvertFrom-Json
+        $existingMetadata.PSObject.Properties | ForEach-Object { $metadata[$_.Name] = $_.Value }
+      }
+      $metadata[[IO.Path]::GetFileName($backup)] = @{
+        filename=[IO.Path]::GetFileName($backup); createdAt=(Get-Date).ToString('s'); backupType='PRE_NEW_DATABASE';
+        reason='Installer created a new active database'; sourceDatabase=[string]$input.database; archivedDatabaseName=$archive; status='COMPLETED'
+      }
+      $metadata | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 -LiteralPath $metadataPath
     }
     & $psql -h $input.host -p $input.port -U $input.adminUser -d postgres -v ON_ERROR_STOP=1 -f $sqlFile *>> (Join-Path $logs 'installer-database.log')
   }
@@ -82,6 +93,10 @@ spring.datasource.username=$($input.appUser)
 spring.datasource.password=`${DB_PASSWORD}
 app.base-url=http://localhost:$($input.appPort)
 app.mail.enabled=false
+app.backup.directory=$([IO.Path]::Combine($DataRoot, 'backups').Replace('\','/'))
+app.postgres.bin=$(([string]$input.postgresBin).Replace('\','/'))
+app.restore.enabled=true
+app.restore.helper-path=$([IO.Path]::Combine($PSScriptRoot, 'restore-request.ps1').Replace('\','/'))
 "@
   $secretsContent = @"
 DB_PASSWORD=$dbPassword

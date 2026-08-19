@@ -25,8 +25,8 @@ import java.util.*;
 /** Deterministic, repeatable demo data. This class is only loaded under the demo profile. */
 @Component
 @Profile("demo")
-public class KovaxDemoDataSeeder implements CommandLineRunner {
-    private static final Logger log = LoggerFactory.getLogger(KovaxDemoDataSeeder.class);
+public class DemoDataSeeder implements CommandLineRunner {
+    private static final Logger log = LoggerFactory.getLogger(DemoDataSeeder.class);
     private static final LocalDate DEMO_DATE = LocalDate.of(2026, 8, 17);
     private static final ZoneId ZONE = ZoneId.of("Asia/Kuala_Lumpur");
     private static final String PASSWORD = "P@ssw0rd123";
@@ -45,7 +45,7 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
     private final DailyWorkReportRepository reports;
     private final NotificationRepository notifications;
 
-    public KovaxDemoDataSeeder(@Value("${app.demo.reset-data:false}") boolean reset,
+    public DemoDataSeeder(@Value("${app.demo.reset-data:false}") boolean reset,
                                PasswordEncoder encoder, DepartmentRepository departments,
                                UserRepository users, BoardRepository boards,
                                KanbanColumnRepository columns, TaskRepository tasks,
@@ -98,7 +98,7 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
         addTeam(result, dept.get("PPC"), "Ahmad", "ahmad", List.of("John", "Farid", "Lina", "Aisyah"));
         addTeam(result, dept.get("PROD"), "Daniel", "daniel", List.of("Mei", "Kumar", "Siti", "Raj"));
         addTeam(result, dept.get("RDD"), "Hana", "hana", List.of("Amir", "Jisoo", "Wei", "Nadia"));
-        addTeam(result, dept.get("QC"), "Sarah", "sarah", List.of("Afiq", "Nurul", "Adam", "Chen"));
+        addTeam(result, dept.get("QC"), "Sarah", "sarah", List.of("Alex", "Nurul", "Adam", "Chen"));
         return result;
     }
 
@@ -142,7 +142,7 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
         Priority[] priority = {Priority.MEDIUM, Priority.HIGH, Priority.MEDIUM, Priority.LOW, Priority.MEDIUM, Priority.HIGH};
         for (String d : DEPARTMENT_NAMES) {
             String manager = Map.of("PPC", "Ahmad", "PROD", "Daniel", "RDD", "Hana", "QC", "Sarah").get(d);
-            List<String> staff = switch (d) { case "PPC" -> List.of("John", "Farid", "Lina", "Aisyah"); case "PROD" -> List.of("Mei", "Kumar", "Siti", "Raj"); case "RDD" -> List.of("Amir", "Jisoo", "Wei", "Nadia"); default -> List.of("Afiq", "Nurul", "Adam", "Chen"); };
+            List<String> staff = switch (d) { case "PPC" -> List.of("John", "Farid", "Lina", "Aisyah"); case "PROD" -> List.of("Mei", "Kumar", "Siti", "Raj"); case "RDD" -> List.of("Amir", "Jisoo", "Wei", "Nadia"); default -> List.of("Alex", "Nurul", "Adam", "Chen"); };
             List<String> bs = boardNames.get(d);
             for (int i = 0; i < 18; i++) {
                 User assignee = people.get(staff.get(i % staff.size()));
@@ -189,7 +189,7 @@ public class KovaxDemoDataSeeder implements CommandLineRunner {
     }
 
     private void seedReports(Map<String, User> people) {
-        List<String> names = List.of("John", "Farid", "Lina", "Aisyah", "Mei", "Kumar", "Siti", "Raj", "Amir", "Jisoo", "Wei", "Nadia", "Afiq", "Nurul", "Adam", "Chen", "Hana", "Daniel");
+        List<String> names = List.of("John", "Farid", "Lina", "Aisyah", "Mei", "Kumar", "Siti", "Raj", "Amir", "Jisoo", "Wei", "Nadia", "Alex", "Nurul", "Adam", "Chen", "Hana", "Daniel");
         // Populate every day of the Aug 10-16 demo week. A few staff/day combinations
         // intentionally remain missing or draft so the weekly status summaries are useful
         // for checking SUBMITTED, DRAFT, and NOT_STARTED rendering.

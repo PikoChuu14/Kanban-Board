@@ -8,4 +8,4 @@ Port 8080 in use: run `netstat -ano | findstr :8080`, stop the owning applicatio
 
 Phone cannot connect: confirm both devices are on the same LAN, use the server IPv4 from `ipconfig`, allow TCP 8080 through Windows Firewall, and do not use `localhost` on the phone.
 
-Application errors: read `logs\kovax-flowops.log`. Backup errors usually mean PostgreSQL client tools are not installed or not on PATH.
+Application errors: read `logs\flowops.log`. Backup errors usually mean PostgreSQL client tools are not installed or not on PATH.

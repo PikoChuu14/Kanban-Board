@@ -6,7 +6,7 @@ import org.mockito.InOrder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.mockito.Mockito.*;
 
-class KovaxDemoDataSeederTest {
+class DemoDataSeederTest {
     @Test
     void resetDeletesNotificationsBeforeUsers() {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
@@ -19,7 +19,7 @@ class KovaxDemoDataSeederTest {
         TaskSnapshotRepository snapshots = mock(TaskSnapshotRepository.class);
         DailyWorkReportRepository reports = mock(DailyWorkReportRepository.class);
         NotificationRepository notifications = mock(NotificationRepository.class);
-        KovaxDemoDataSeeder seeder = new KovaxDemoDataSeeder(true, encoder, departments, users,
+        DemoDataSeeder seeder = new DemoDataSeeder(true, encoder, departments, users,
                 boards, columns, tasks, batches, snapshots, reports, notifications);
 
         seeder.resetDemoData();

@@ -1,6 +1,6 @@
-#define AppName "Kovax FlowOps"
+#define AppName "FlowOps"
 #define AppVersion "1.0.0"
-#define AppPublisher "Kovax"
+#define AppPublisher "FlowOps Contributors"
 ; Permanent product identity. Keep this value unchanged for every release.
 #define AppId "{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}"
 
@@ -9,26 +9,27 @@ AppId={{#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\Kovax FlowOps
-DefaultGroupName=Kovax FlowOps
+DefaultDirName={autopf}\FlowOps
+DefaultGroupName=FlowOps
+UsePreviousAppDir=no
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=KovaxFlowOps-Setup
-UninstallDisplayName=Kovax FlowOps
+OutputBaseFilename=FlowOps-Setup
+UninstallDisplayName=FlowOps
 PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 VersionInfoVersion={#AppVersion}.0
-VersionInfoDescription=Kovax FlowOps installer
+VersionInfoDescription=FlowOps installer
 
 [Files]
 Source: "payload\app\*"; DestDir: "{app}\app"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "payload\runtime\*"; DestDir: "{app}\runtime"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "payload\KovaxFlowOps.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "payload\KovaxFlowOps.xml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "payload\FlowOps.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "payload\FlowOps.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "payload\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "payload\prerequisites\postgresql-installer.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "scripts\detect-postgresql.ps1"; DestDir: "{tmp}"; Flags: dontcopy
@@ -41,24 +42,26 @@ Source: "..\ADMIN_GUIDE.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\VERSION.txt"; DestDir: "{app}\docs"; Flags: ignoreversion
 
 [Dirs]
-Name: "{commonappdata}\Kovax FlowOps\config"
-Name: "{commonappdata}\Kovax FlowOps\logs"
-Name: "{commonappdata}\Kovax FlowOps\backups"
-Name: "{commonappdata}\Kovax FlowOps\runtime"
+Name: "{commonappdata}\FlowOps\config"
+Name: "{commonappdata}\FlowOps\logs"
+Name: "{commonappdata}\FlowOps\backups"
+Name: "{commonappdata}\FlowOps\runtime"
 
 [Icons]
-Name: "{group}\Open Kovax FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"
-Name: "{group}\Backup Kovax FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\backup-installed.ps1"""
-Name: "{group}\Restore Kovax FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\restore-installed.ps1"""
-Name: "{group}\Kovax FlowOps Documentation"; Filename: "{app}\docs"
-Name: "{commondesktop}\Kovax FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; Tasks: desktopicon
+Name: "{group}\Open FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"
+Name: "{group}\Backup FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\backup-installed.ps1"""
+Name: "{group}\Restore FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\restore-installed.ps1"""
+Name: "{group}\FlowOps Documentation"; Filename: "{app}\docs"
+Name: "{commondesktop}\FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [UninstallRun]
-Filename: "{app}\KovaxFlowOps.exe"; Parameters: "stop"; Flags: runhidden waituntilterminated
-Filename: "{app}\KovaxFlowOps.exe"; Parameters: "uninstall"; Flags: runhidden waituntilterminated
+Filename: "{app}\FlowOps.exe"; Parameters: "stop"; Flags: runhidden waituntilterminated
+Filename: "{app}\FlowOps.exe"; Parameters: "uninstall"; Flags: runhidden waituntilterminated
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""FlowOps"""; Flags: runhidden waituntilterminated
+; Legacy pre-rebrand firewall rule cleanup.
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Kovax FlowOps"""; Flags: runhidden waituntilterminated
 
 [Code]
@@ -86,6 +89,7 @@ var
   PgDiagnosticSummary: String;
   AppPort: String;
   DataRoot: String;
+  LegacyDataRoot: String;
   StartupTitleLabel: TNewStaticText;
   StartupSpinner: TNewStaticText;
   StartupStatusLabel: TNewStaticText;
@@ -177,10 +181,10 @@ end;
 
 function InstallModeMessage: String;
 begin
-  if InstallMode = 'upgrade' then Result := 'Kovax FlowOps ' + InstalledVersion + ' is installed. This setup will upgrade it to {#AppVersion}.'
-  else if InstallMode = 'repair' then Result := 'Kovax FlowOps ' + InstalledVersion + ' is already installed. This setup can repair it.'
-  else if FlowOpsDataDetected then Result := 'Existing Kovax FlowOps data was found. This setup will reinstall the application with your choice of database.'
-  else Result := 'Fresh installation: no existing Kovax FlowOps application or database was detected.';
+  if InstallMode = 'upgrade' then Result := 'FlowOps ' + InstalledVersion + ' is installed. This setup will upgrade it to {#AppVersion}.'
+  else if InstallMode = 'repair' then Result := 'FlowOps ' + InstalledVersion + ' is already installed. This setup can repair it.'
+  else if FlowOpsDataDetected then Result := 'Existing FlowOps data was found. This setup will reinstall the application with your choice of database.'
+  else Result := 'Fresh installation: no existing FlowOps application or database was detected.';
 end;
 
 procedure LayoutQueryPage(Page: TInputQueryWizardPage);
@@ -271,14 +275,14 @@ begin
   end;
 end;
 
-procedure OpenKovaxFlowOps(Sender: TObject);
+procedure OpenFlowOps(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
   ShellExec('', 'http://localhost:' + AppPort, '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
 end;
 
-procedure OpenKovaxLogs(Sender: TObject);
+procedure OpenFlowOpsLogs(Sender: TObject);
 var
   ErrorCode: Integer;
 begin
@@ -299,7 +303,7 @@ begin
   StartupTimedOut := False;
   StartupTimerTicks := 0;
   StartupSpinnerFrame := 0;
-  StartupTitleLabel.Caption := 'Starting Kovax FlowOps';
+  StartupTitleLabel.Caption := 'Starting FlowOps';
   StartupStatusLabel.Caption := 'Starting Windows service...';
   StartupExplanationLabel.Caption := 'This may take up to 90 seconds on first launch.';
   StartupOpenButton.Visible := False;
@@ -320,7 +324,7 @@ begin
     StopStartupTimer;
     StartupSpinner.Visible := False;
     StartupTimedOut := True;
-    StartupTitleLabel.Caption := 'Kovax FlowOps is taking longer than expected to start.';
+    StartupTitleLabel.Caption := 'FlowOps is taking longer than expected to start.';
     StartupStatusLabel.Caption := 'The readiness check could not be started.';
     StartupExplanationLabel.Caption := 'The service may still be starting or may require troubleshooting.';
     StartupRetryButton.Visible := True;
@@ -350,7 +354,7 @@ begin
   else if StartupTimerTicks < 100 then
     StartupStatusLabel.Caption := 'Preparing application...'
   else
-    StartupStatusLabel.Caption := 'Waiting for Kovax FlowOps to become ready...';
+    StartupStatusLabel.Caption := 'Waiting for FlowOps to become ready...';
 
   { Read the worker result once per second; this never performs network I/O on the UI thread. }
   if ((StartupTimerTicks mod 10) <> 0) or
@@ -362,9 +366,9 @@ begin
     StartupReady := True;
     StopStartupTimer;
     StartupSpinner.Visible := False;
-    StartupTitleLabel.Caption := #10003 + ' Kovax FlowOps is ready';
+    StartupTitleLabel.Caption := #10003 + ' FlowOps is ready';
     StartupStatusLabel.Caption := 'The application has started successfully.';
-    StartupExplanationLabel.Caption := 'You can open Kovax FlowOps now, or finish setup and open it later from the shortcut.';
+    StartupExplanationLabel.Caption := 'You can open FlowOps now, or finish setup and open it later from the shortcut.';
     StartupOpenButton.Visible := True;
     WizardForm.NextButton.Enabled := True;
   end
@@ -373,7 +377,7 @@ begin
     StartupTimedOut := True;
     StopStartupTimer;
     StartupSpinner.Visible := False;
-    StartupTitleLabel.Caption := 'Kovax FlowOps is taking longer than expected to start.';
+    StartupTitleLabel.Caption := 'FlowOps is taking longer than expected to start.';
     StartupStatusLabel.Caption := 'The service may still be starting or may require troubleshooting.';
     StartupExplanationLabel.Caption := 'You can retry the readiness check or open the logs for more information.';
     StartupRetryButton.Visible := True;
@@ -435,12 +439,12 @@ begin
   ButtonTop := ScaleY(252);
   StartupOpenButton := TNewButton.Create(WizardForm.FinishedPage);
   StartupOpenButton.Parent := WizardForm.FinishedPage;
-  StartupOpenButton.Caption := 'Open Kovax FlowOps';
+  StartupOpenButton.Caption := 'Open FlowOps';
   StartupOpenButton.Width := ScaleX(150);
   StartupOpenButton.Height := ScaleY(28);
   StartupOpenButton.Left := CenterX - (StartupOpenButton.Width div 2);
   StartupOpenButton.Top := ButtonTop;
-  StartupOpenButton.OnClick := @OpenKovaxFlowOps;
+  StartupOpenButton.OnClick := @OpenFlowOps;
 
   StartupRetryButton := TNewButton.Create(WizardForm.FinishedPage);
   StartupRetryButton.Parent := WizardForm.FinishedPage;
@@ -458,7 +462,7 @@ begin
   StartupLogsButton.Height := ScaleY(28);
   StartupLogsButton.Left := CenterX + ScaleX(8);
   StartupLogsButton.Top := ButtonTop;
-  StartupLogsButton.OnClick := @OpenKovaxLogs;
+  StartupLogsButton.OnClick := @OpenFlowOpsLogs;
 
   StartupOpenButton.Visible := False;
   StartupRetryButton.Visible := False;
@@ -481,10 +485,33 @@ begin
   StringChangeEx(Result, #13, '', True);
 end;
 
-function DetectFlowOpsService: Boolean;
+function ServiceExistsNamed(const ServiceName: String): Boolean;
 var Code: Integer;
 begin
-  Result := Exec(ExpandConstant('{sys}\sc.exe'), 'query KovaxFlowOps', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+  Result := Exec(ExpandConstant('{sys}\sc.exe'), 'query ' + ServiceName, '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+end;
+
+function DetectFlowOpsService: Boolean;
+begin
+  { KovaxFlowOps is the legacy pre-rebrand service identifier. }
+  Result := ServiceExistsNamed('FlowOps') or ServiceExistsNamed('KovaxFlowOps');
+end;
+
+procedure MigrateLegacyData;
+var Code: Integer;
+begin
+  { Preserve configuration, JWT secrets, backups, metadata and restore state from test installs. }
+  if DirExists(LegacyDataRoot) and not DirExists(DataRoot) then
+  begin
+    Log('Legacy ProgramData detected; copying it to the FlowOps data directory');
+    ForceDirectories(DataRoot);
+    if (not Exec(ExpandConstant('{sys}\robocopy.exe'), '"' + LegacyDataRoot + '" "' + DataRoot + '" /E /COPY:DAT /DCOPY:DAT /R:2 /W:1', '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code >= 8) then
+    begin
+      MsgBox('Existing FlowOps data could not be migrated to ' + DataRoot + '. Setup stopped without changing the database.', mbError, MB_OK);
+      Abort;
+    end;
+    Log('Legacy ProgramData copied successfully; the source is retained as a safety copy');
+  end;
 end;
 
 function DetectInstalledFlowOps: Boolean;
@@ -494,6 +521,8 @@ begin
   Key := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}_is1';
   if RegQueryStringValue(HKLM, Key, 'DisplayVersion', VersionText) then begin Result := True; InstalledVersion := VersionText; end;
   if IsWin64 and RegQueryStringValue(HKLM32, Key, 'DisplayVersion', VersionText) then begin Result := True; if InstalledVersion = '' then InstalledVersion := VersionText; end;
+  if FileExists(ExpandConstant('{autopf}\FlowOps\FlowOps.exe')) then Result := True;
+  { Legacy pre-rebrand application wrapper detection. }
   if FileExists(ExpandConstant('{autopf}\Kovax FlowOps\KovaxFlowOps.exe')) then Result := True;
   ServiceDetected := DetectFlowOpsService;
   if ServiceDetected then Result := True;
@@ -598,7 +627,10 @@ end;
 
 procedure InitializeWizard;
 begin
-  AppPort := '8080'; DataRoot := ExpandConstant('{commonappdata}\Kovax FlowOps');
+  AppPort := '8080';
+  DataRoot := ExpandConstant('{commonappdata}\FlowOps');
+  LegacyDataRoot := ExpandConstant('{commonappdata}\Kovax FlowOps');
+  MigrateLegacyData;
   DetectInstalledFlowOps;
   if not AppInstalled then InstallMode := 'fresh'
   else if InstalledVersion = '' then InstallMode := 'repair'
@@ -616,10 +648,10 @@ begin
   DbStatusLabel.Caption := PgDetectionSummary + #13#10#13#10 + PgDiagnosticSummary;
   if PostgreSQLDetected then DbInstalledRadio.Checked := True else DbAutomaticRadio.Checked := True;
   LayoutDatabasePage;
-  FlowDbPage := CreateCustomPage(DbChoicePage.ID, 'Database setup', 'Choose the Kovax FlowOps database');
-  FlowDbIntroLabel := TNewStaticText.Create(FlowDbPage.Surface); FlowDbIntroLabel.Parent := FlowDbPage.Surface; FlowDbIntroLabel.Caption := 'Existing Kovax FlowOps data was found.';
+  FlowDbPage := CreateCustomPage(DbChoicePage.ID, 'Database setup', 'Choose the FlowOps database');
+  FlowDbIntroLabel := TNewStaticText.Create(FlowDbPage.Surface); FlowDbIntroLabel.Parent := FlowDbPage.Surface; FlowDbIntroLabel.Caption := 'Existing FlowOps data was found.';
   FlowDbExistingRadio := TNewRadioButton.Create(FlowDbPage.Surface); FlowDbExistingRadio.Parent := FlowDbPage.Surface; FlowDbExistingRadio.Caption := 'Use existing database - keep users, tasks, projects, reports and settings.';
-  FlowDbNewRadio := TNewRadioButton.Create(FlowDbPage.Surface); FlowDbNewRadio.Parent := FlowDbPage.Surface; FlowDbNewRadio.Caption := 'Start with a new database - create a clean Kovax FlowOps database.';
+  FlowDbNewRadio := TNewRadioButton.Create(FlowDbPage.Surface); FlowDbNewRadio.Parent := FlowDbPage.Surface; FlowDbNewRadio.Caption := 'Start with a new database - create a clean FlowOps database.';
   FlowDbConfirmLabel := TNewStaticText.Create(FlowDbPage.Surface); FlowDbConfirmLabel.Parent := FlowDbPage.Surface; FlowDbConfirmLabel.Caption := 'Starting new requires explicit confirmation. A backup will be created and the old database will be archived before a fresh database is created.';
   FlowDbExistingRadio.Checked := True; LayoutFlowDbPage;
   UseExistingDatabase := FlowOpsDatabaseDetected or FlowOpsDataDetected;
@@ -627,7 +659,7 @@ begin
   DbAdminPage.Add('Host:', False); DbAdminPage.Add('Port:', False); DbAdminPage.Add('Administrator username:', False); DbAdminPage.Add('Administrator password:', True);
   DbAdminPage.Values[0] := 'localhost'; DbAdminPage.Values[1] := '5432'; DbAdminPage.Values[2] := 'postgres';
   LayoutQueryPage(DbAdminPage);
-  AdminPage := CreateInputQueryPage(DbAdminPage.ID, 'Create Kovax FlowOps Administrator', 'Set up the first administrator', 'This account will be the first ADMIN account.');
+  AdminPage := CreateInputQueryPage(DbAdminPage.ID, 'Create FlowOps Administrator', 'Set up the first administrator', 'This account will be the first ADMIN account.');
   AdminPage.Add('Full name:', False); AdminPage.Add('Email:', False); AdminPage.Add('Password:', True); AdminPage.Add('Confirm password:', True);
   LayoutQueryPage(AdminPage);
   CreateStartupControls;
@@ -639,13 +671,13 @@ begin
   if CurPageID = DbChoicePage.ID then begin
     InstallPostgres := DbAutomaticRadio.Checked; Log('PostgreSQL detected: ' + BooleanText(PostgreSQLDetected));
     if AppInstalled and (InstallMode = 'repair') then
-      if MsgBox('Kovax FlowOps ' + InstalledVersion + ' is already installed.' + #13#10#13#10 + 'Continue with a repair installation?', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
+      if MsgBox('FlowOps ' + InstalledVersion + ' is already installed.' + #13#10#13#10 + 'Continue with a repair installation?', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
   end;
   if CurPageID = FlowDbPage.ID then begin
     UseExistingDatabase := FlowDbExistingRadio.Checked;
     Log('Selected database mode: ' + DatabaseModeText(UseExistingDatabase));
     if not UseExistingDatabase then begin
-      if MsgBox('Start with a new Kovax FlowOps database?' + #13#10#13#10 + 'Existing company data will no longer be used by this installation. A backup will be created before continuing.', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
+      if MsgBox('Start with a new FlowOps database?' + #13#10#13#10 + 'Existing data will no longer be used by this installation. A backup will be created before continuing.', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
       NewDatabaseConfirmed := True;
     end;
   end;
@@ -670,7 +702,7 @@ begin
   Result := False;
   InputPath := ExpandConstant('{tmp}\flowops-setup.json');
   if FlowOpsDatabaseDetected and UseExistingDatabase then Log('Existing FlowOps database selected; preserved without destructive schema operations') else Log('New FlowOps database selected; backup/archive will be performed when an old database exists');
-  Json := '{"host":"' + JsonEscape(DbAdminPage.Values[0]) + '","port":"' + JsonEscape(DbAdminPage.Values[1]) + '","adminUser":"' + JsonEscape(DbAdminPage.Values[2]) + '","postgresAdminPassword":"' + JsonEscape(DbAdminPage.Values[3]) + '","postgresBin":"' + JsonEscape(PgBinDir) + '","postgresService":"' + JsonEscape(PgServiceName) + '","postgresStatus":"' + JsonEscape(PgServiceStatus) + '","postgresVersion":"' + JsonEscape(PgMajorVersion) + '","postgresDetection":"' + JsonEscape(PgDetectionMessage) + '","appUser":"kovax_user","database":"kovax_flowops","appPort":"' + JsonEscape(AppPort) + '","databaseMode":"' + DatabaseModeText(UseExistingDatabase) + '","flowopsDatabaseDetected":' + JsonBoolean(FlowOpsDatabaseDetected) + ',"adminName":"' + JsonEscape(AdminPage.Values[0]) + '","adminEmail":"' + JsonEscape(AdminPage.Values[1]) + '","adminPassword":"' + JsonEscape(AdminPage.Values[2]) + '"}';
+  Json := '{"host":"' + JsonEscape(DbAdminPage.Values[0]) + '","port":"' + JsonEscape(DbAdminPage.Values[1]) + '","adminUser":"' + JsonEscape(DbAdminPage.Values[2]) + '","postgresAdminPassword":"' + JsonEscape(DbAdminPage.Values[3]) + '","postgresBin":"' + JsonEscape(PgBinDir) + '","postgresService":"' + JsonEscape(PgServiceName) + '","postgresStatus":"' + JsonEscape(PgServiceStatus) + '","postgresVersion":"' + JsonEscape(PgMajorVersion) + '","postgresDetection":"' + JsonEscape(PgDetectionMessage) + '","appUser":"flowops_user","database":"flowops","appPort":"' + JsonEscape(AppPort) + '","databaseMode":"' + DatabaseModeText(UseExistingDatabase) + '","flowopsDatabaseDetected":' + JsonBoolean(FlowOpsDatabaseDetected) + ',"adminName":"' + JsonEscape(AdminPage.Values[0]) + '","adminEmail":"' + JsonEscape(AdminPage.Values[1]) + '","adminPassword":"' + JsonEscape(AdminPage.Values[2]) + '"}';
   SaveStringToFile(InputPath, Json, False);
   Exec(PsPath, '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\tools\setup-database.ps1') + '" -InputFile "' + InputPath + '" -DataRoot "' + DataRoot + '"', '', SW_HIDE, ewWaitUntilTerminated, Code);
   DeleteFile(InputPath);
@@ -678,52 +710,47 @@ begin
   Result := True;
 end;
 
-function ServiceExists: Boolean;
-var Code: Integer;
+procedure RemoveServiceByName(const ServiceName, WrapperPath: String);
+var Code, Attempt: Integer; WorkingDirectory: String;
 begin
-  Result := Exec(ExpandConstant('{sys}\sc.exe'), 'query KovaxFlowOps', '', SW_HIDE,
-    ewWaitUntilTerminated, Code) and (Code = 0);
-end;
-
-procedure RemoveExistingService;
-var Code, Attempt: Integer; WrapperPath: String;
-begin
-  if not ServiceExists then
-  begin
-    Log('Existing KovaxFlowOps service: not found');
-    Exit;
-  end;
-
-  Log('Existing KovaxFlowOps service found; stopping and uninstalling it before files are replaced');
-  WrapperPath := ExpandConstant('{app}\KovaxFlowOps.exe');
+  if not ServiceExistsNamed(ServiceName) then Exit;
+  Log('Existing service found; removing: ' + ServiceName);
+  WorkingDirectory := ExtractFileDir(WrapperPath);
   if FileExists(WrapperPath) then
   begin
-    Exec(WrapperPath, 'stop', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
-    Log('Existing WinSW stop exit code: ' + IntToStr(Code));
-    Exec(WrapperPath, 'uninstall', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code);
-    Log('Existing WinSW uninstall exit code: ' + IntToStr(Code));
+    Exec(WrapperPath, 'stop', WorkingDirectory, SW_HIDE, ewWaitUntilTerminated, Code);
+    Exec(WrapperPath, 'uninstall', WorkingDirectory, SW_HIDE, ewWaitUntilTerminated, Code);
   end;
-
-  if ServiceExists then
+  if ServiceExistsNamed(ServiceName) then
   begin
-    Exec(ExpandConstant('{sys}\sc.exe'), 'stop KovaxFlowOps', '', SW_HIDE, ewWaitUntilTerminated, Code);
-    Log('Fallback service stop exit code: ' + IntToStr(Code));
-    Exec(ExpandConstant('{sys}\sc.exe'), 'delete KovaxFlowOps', '', SW_HIDE, ewWaitUntilTerminated, Code);
-    Log('Fallback service delete exit code: ' + IntToStr(Code));
+    Exec(ExpandConstant('{sys}\sc.exe'), 'stop ' + ServiceName, '', SW_HIDE, ewWaitUntilTerminated, Code);
+    Exec(ExpandConstant('{sys}\sc.exe'), 'delete ' + ServiceName, '', SW_HIDE, ewWaitUntilTerminated, Code);
   end;
-
   for Attempt := 1 to 20 do
   begin
-    if not ServiceExists then
-    begin
-      Log('Existing KovaxFlowOps service removed');
-      Exit;
-    end;
+    if not ServiceExistsNamed(ServiceName) then Exit;
     Sleep(250);
   end;
-
-  MsgBox('The existing Kovax FlowOps service could not be removed. Close Windows Services and retry the installer.', mbError, MB_OK);
+  MsgBox('The existing FlowOps service could not be removed. Close Windows Services and retry the installer.', mbError, MB_OK);
   Abort;
+end;
+
+procedure RemoveExistingServices;
+var LegacyAppRoot: String;
+begin
+  RemoveServiceByName('FlowOps', ExpandConstant('{autopf}\FlowOps\FlowOps.exe'));
+  { KovaxFlowOps and its wrapper path are retained only for pre-rebrand test migration. }
+  LegacyAppRoot := ExpandConstant('{autopf}\Kovax FlowOps');
+  RemoveServiceByName('KovaxFlowOps', LegacyAppRoot + '\KovaxFlowOps.exe');
+  if DirExists(LegacyAppRoot) then
+  begin
+    Log('Removing legacy application binaries after persistent data migration');
+    if not DelTree(LegacyAppRoot, True, True, True) then
+    begin
+      MsgBox('Legacy FlowOps application files could not be removed. Close any programs using ' + LegacyAppRoot + ' and retry.', mbError, MB_OK);
+      Abort;
+    end;
+  end;
 end;
 
 procedure ConfigureServiceDependency;
@@ -735,13 +762,13 @@ begin
     Exit;
   end;
 
-  Log('Configuring KovaxFlowOps dependency: ' + PgServiceName);
+  Log('Configuring FlowOps dependency: ' + PgServiceName);
   if (not Exec(ExpandConstant('{sys}\sc.exe'),
-    'config KovaxFlowOps depend= ' + PgServiceName, '', SW_HIDE,
+    'config FlowOps depend= ' + PgServiceName, '', SW_HIDE,
     ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
     Log('Service dependency configuration failed; exit code: ' + IntToStr(Code));
-    MsgBox('Kovax FlowOps could not be configured to depend on ' + PgServiceName + '.', mbError, MB_OK);
+    MsgBox('FlowOps could not be configured to depend on ' + PgServiceName + '.', mbError, MB_OK);
     Abort;
   end;
   Log('Service dependency configured successfully: ' + PgServiceName);
@@ -768,28 +795,29 @@ end;
 procedure InstallServiceAndFirewall;
 var Code: Integer;
 begin
-  if (not Exec(ExpandConstant('{app}\KovaxFlowOps.exe'), 'install', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+  if (not Exec(ExpandConstant('{app}\FlowOps.exe'), 'install', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
-    MsgBox('The Kovax FlowOps Windows service could not be installed.', mbError, MB_OK);
+    MsgBox('The FlowOps Windows service could not be installed.', mbError, MB_OK);
     Abort;
   end;
   ConfigureServiceDependency;
-  if (not Exec(ExpandConstant('{sys}\sc.exe'), 'config KovaxFlowOps start= auto', '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+  if (not Exec(ExpandConstant('{sys}\sc.exe'), 'config FlowOps start= auto', '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
-    MsgBox('The Kovax FlowOps Windows service startup mode could not be configured.', mbError, MB_OK);
+    MsgBox('The FlowOps Windows service startup mode could not be configured.', mbError, MB_OK);
     Abort;
   end;
-  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall add rule name="Kovax FlowOps" dir=in action=allow protocol=TCP localport=' + AppPort + ' profile=private', '', SW_HIDE, ewWaitUntilTerminated, Code);
-  if (not Exec(ExpandConstant('{app}\KovaxFlowOps.exe'), 'start', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="Kovax FlowOps"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall add rule name="FlowOps" dir=in action=allow protocol=TCP localport=' + AppPort + ' profile=private', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  if (not Exec(ExpandConstant('{app}\FlowOps.exe'), 'start', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
-    MsgBox('The Kovax FlowOps service could not be started. See ' + DataRoot + '\logs\KovaxFlowOps.wrapper.log.', mbError, MB_OK);
+    MsgBox('The FlowOps service could not be started. See ' + DataRoot + '\logs\FlowOps.wrapper.log.', mbError, MB_OK);
     Abort;
   end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
-  if CurStep = ssInstall then RemoveExistingService;
+  if CurStep = ssInstall then RemoveExistingServices;
   if CurStep = ssPostInstall then begin
     InstallPostgresIfNeeded;
     if not ConfigureDatabase then Abort;

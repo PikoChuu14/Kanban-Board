@@ -29,6 +29,9 @@ class ProductionFrontendSecurityTest {
         assertIndex("/dashboard");
         assertIndex("/projects");
         assertIndex("/reports");
+        assertIndex("/activate?token=test");
+        assertIndex("/admin/users");
+        assertIndex("/admin/settings/data-management");
     }
 
     @Test
@@ -54,6 +57,8 @@ class ProductionFrontendSecurityTest {
                 "/api/tasks/my",
                 "/api/boards",
                 "/api/users",
+                "/api/admin/users",
+                "/api/admin/data-management/backups",
                 "/api/notifications",
                 "/api/reviews",
                 "/api/daily-reports/today",

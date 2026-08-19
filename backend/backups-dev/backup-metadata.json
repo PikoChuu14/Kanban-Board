@@ -1,0 +1,20 @@
+{
+  "kovax_flowops_20260819_133026.backup" : {
+    "filename" : "kovax_flowops_20260819_133026.backup",
+    "createdAt" : "2026-08-19T13:30:26.8662502",
+    "backupType" : "MANUAL",
+    "reason" : "Created from Admin Data Management",
+    "sourceDatabase" : "kanban_db",
+    "archivedDatabaseName" : null,
+    "status" : "COMPLETED"
+  },
+  "kovax_flowops_20260819_133540.backup" : {
+    "filename" : "kovax_flowops_20260819_133540.backup",
+    "createdAt" : "2026-08-19T13:35:40.3498578",
+    "backupType" : "PRE_RESTORE",
+    "reason" : "Automatic safety backup before restoring kovax_flowops_20260819_133026.backup",
+    "sourceDatabase" : "kanban_db",
+    "archivedDatabaseName" : null,
+    "status" : "COMPLETED"
+  }
+}

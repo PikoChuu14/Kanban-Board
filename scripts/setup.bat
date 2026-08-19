@@ -2,12 +2,12 @@
 setlocal EnableExtensions
 cd /d "%~dp0.."
 echo ========================================
-echo        Kovax FlowOps Setup
+echo            FlowOps Setup
 echo ========================================
 where java >nul 2>&1 || (echo [FAIL] Java 21 is not installed. & exit /b 1)
 for /f "tokens=3" %%v in ('java -version 2^>^&1 ^| findstr /i "version"') do set JAVA_VERSION=%%~v
 echo [OK] Java detected: %JAVA_VERSION%
-if not exist app\kovax-flowops.jar (echo [FAIL] app\kovax-flowops.jar not found. & exit /b 1)
+if not exist app\flowops.jar (echo [FAIL] app\flowops.jar not found. & exit /b 1)
 if not exist config mkdir config
 if not exist logs mkdir logs
 if not exist backups mkdir backups
@@ -26,7 +26,7 @@ findstr /c:"app.bootstrap.admin.email=" config\secrets.properties >nul || (
 )
 if not exist config\pgpass.conf (
   for /f "tokens=2 delims==" %%p in ('findstr /b "spring.datasource.password=" config\application.properties') do set DBPASS=%%p
-  if defined DBPASS echo localhost:5432:kovax_flowops:kovax_user:%DBPASS%>config\pgpass.conf
+  if defined DBPASS echo localhost:5432:flowops:flowops_user:%DBPASS%>config\pgpass.conf
 )
 echo [OK] Application configuration found
 echo [OK] Security secret is persistent

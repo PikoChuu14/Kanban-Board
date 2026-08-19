@@ -1,3 +1,3 @@
 @echo off
-echo Remove the "Kovax FlowOps" service using the service wrapper used by your company.
+echo Remove the "FlowOps" service using the configured service wrapper.
 echo See WINDOWS_SERVICE.md.

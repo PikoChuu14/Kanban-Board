@@ -11,6 +11,6 @@ echo Building backend and bundling frontend...
 call mvnw.cmd -DskipTests clean package
 if errorlevel 1 (echo BUILD FAILED & exit /b 1)
 echo.
-echo Built artifact: %cd%\target\kovax-flowops.jar
-echo Final handover package: %cd%\..\dist\Kovax-FlowOps\
+echo Built artifact: %cd%\target\flowops.jar
+echo Final handover package: %cd%\..\dist\FlowOps\
 endlocal

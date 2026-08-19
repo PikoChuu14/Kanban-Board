@@ -16,7 +16,7 @@ $user = Get-Property $application 'spring.datasource.username'
 $url = Get-Property $application 'spring.datasource.url'
 $host = 'localhost'; $port = '5432'
 if ($url -match '^jdbc:postgresql://([^:/]+)(?::(\d+))?/([^?]+)') { $host = $Matches[1]; if ($Matches[2]) { $port = $Matches[2] }; $db = $Matches[3] }
-if (-not $db) { $db = 'kovax_flowops' }
+if (-not $db) { $db = 'flowops' }
 if (-not $PsqlPath) { $cmd = Get-Command psql.exe -ErrorAction SilentlyContinue; if ($cmd) { $PsqlPath = $cmd.Source } }
 
 $dbDetected = $false; $dataDetected = [bool](Test-Path -LiteralPath $application); $adminDetected = $false; $querySucceeded = $false; $adminCount = 0

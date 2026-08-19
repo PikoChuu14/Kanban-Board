@@ -1,0 +1,12 @@
+<service>
+  <id>FlowOps</id>
+  <name>FlowOps</name>
+  <description>FlowOps operational workflow and task management</description>
+  <executable>%BASE%\runtime\bin\java.exe</executable>
+  <arguments>-jar "%BASE%\app\flowops.jar" --spring.profiles.active=prod "--spring.config.additional-location=optional:file:C:/ProgramData/FlowOps/config/" "--spring.config.import=optional:file:C:/ProgramData/FlowOps/config/secrets.properties" "--logging.file.name=C:/ProgramData/FlowOps/logs/flowops.log"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+  <logpath>C:\ProgramData\FlowOps\logs</logpath>
+  <log mode="append" />
+  <onfailure action="restart" delay="10 sec" />
+  <startmode>Automatic</startmode>
+</service>

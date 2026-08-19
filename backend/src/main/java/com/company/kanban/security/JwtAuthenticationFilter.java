@@ -1,6 +1,7 @@
 package com.company.kanban.security;
 
 import com.company.kanban.entity.User;
+import com.company.kanban.entity.AccountStatus;
 import com.company.kanban.repository.UserRepository;
 import com.company.kanban.service.JwtService;
 import jakarta.servlet.FilterChain;
@@ -68,10 +69,10 @@ public class JwtAuthenticationFilter
 
             User user =
                     userRepository
-                            .findByEmail(email)
+                            .findByEmailIgnoreCase(email)
                             .orElse(null);
 
-            if (user != null) {
+            if (user != null && user.getStatus() == AccountStatus.ACTIVE) {
 
                 SimpleGrantedAuthority authority =
                         new SimpleGrantedAuthority(

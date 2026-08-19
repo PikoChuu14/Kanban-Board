@@ -1,6 +1,7 @@
 package com.company.kanban.dto;
 
 import com.company.kanban.entity.Role;
+import com.company.kanban.entity.AccountStatus;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +12,8 @@ public record UserResponse(
         Role role,
         Long departmentId,
         String departmentName,
-        LocalDateTime createdAt
+        AccountStatus status,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }

@@ -11,8 +11,8 @@
 	<groupId>com.company</groupId>
 	<artifactId>kanban</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>kanban</name>
-	<description/>
+	<name>FlowOps</name>
+	<description>Self-hosted operational workflow and task management platform</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -103,7 +103,7 @@
 	</dependencies>
 
 	<build>
-		<finalName>kovax-flowops</finalName>
+		<finalName>flowops</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version>

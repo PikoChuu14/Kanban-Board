@@ -5,7 +5,7 @@ function Assert-True([bool]$Condition, [string]$Message) {
   if (-not $Condition) { throw $Message }
 }
 
-$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('KovaxFlowOps-JwtSecret-' + [guid]::NewGuid().ToString('N'))
+$testRoot = Join-Path ([IO.Path]::GetTempPath()) ('FlowOps-JwtSecret-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $testRoot | Out-Null
 try {
   $secretsPath = Join-Path $testRoot 'secrets.properties'
