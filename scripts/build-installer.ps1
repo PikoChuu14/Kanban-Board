@@ -25,7 +25,7 @@ Copy-Item "$backend\target\kovax-flowops.jar" "$payload\app\kovax-flowops.jar" -
 Copy-Item "$installer\service.xml" "$payload\KovaxFlowOps.xml" -Force
 Copy-Item $winsw "$payload\KovaxFlowOps.exe" -Force
 Copy-Item $postgresInstaller "$payload\prerequisites\postgresql-installer.exe" -Force
-Copy-Item "$installer\scripts\setup-database.ps1","$installer\scripts\jwt-secret.ps1","$installer\scripts\backup-installed.ps1","$installer\scripts\restore-installed.ps1","$installer\scripts\detect-postgresql.ps1","$installer\scripts\wait-for-ready.ps1" "$payload\tools" -Force
+Copy-Item "$installer\scripts\setup-database.ps1","$installer\scripts\jwt-secret.ps1","$installer\scripts\backup-installed.ps1","$installer\scripts\restore-installed.ps1","$installer\scripts\detect-postgresql.ps1","$installer\scripts\inspect-flowops.ps1","$installer\scripts\wait-for-ready.ps1" "$payload\tools" -Force
 Write-Host '[OK]'
 Write-Host '[4/6] Creating private Java 21 runtime...'
 $runtimeDir = Join-Path $payload 'runtime'

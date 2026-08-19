@@ -1,6 +1,7 @@
 #define AppName "Kovax FlowOps"
 #define AppVersion "1.0.0"
 #define AppPublisher "Kovax"
+; Permanent product identity. Keep this value unchanged for every release.
 #define AppId "{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}"
 
 [Setup]
@@ -10,6 +11,8 @@ AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
 DefaultDirName={autopf}\Kovax FlowOps
 DefaultGroupName=Kovax FlowOps
+DisableDirPage=yes
+DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
 OutputBaseFilename=KovaxFlowOps-Setup
 UninstallDisplayName=Kovax FlowOps
@@ -29,6 +32,7 @@ Source: "payload\KovaxFlowOps.xml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "payload\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "payload\prerequisites\postgresql-installer.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 Source: "scripts\detect-postgresql.ps1"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "scripts\inspect-flowops.ps1"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\START_HERE.txt"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\DEPLOYMENT.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "..\BACKUP_RESTORE.md"; DestDir: "{app}\docs"; Flags: ignoreversion
@@ -66,6 +70,11 @@ var
   DbAdminPage: TInputQueryWizardPage;
   AdminPage: TInputQueryWizardPage;
   DbStatusLabel: TNewStaticText;
+  FlowDbPage: TWizardPage;
+  FlowDbIntroLabel: TNewStaticText;
+  FlowDbExistingRadio: TNewRadioButton;
+  FlowDbNewRadio: TNewRadioButton;
+  FlowDbConfirmLabel: TNewStaticText;
   PostgreSQLDetected: Boolean;
   InstallPostgres: Boolean;
   PgBinDir: String;
@@ -91,6 +100,16 @@ var
   StartupStateFile: String;
   StartupReady: Boolean;
   StartupTimedOut: Boolean;
+  AppInstalled: Boolean;
+  ServiceDetected: Boolean;
+  ProgramDataDetected: Boolean;
+  FlowOpsDatabaseDetected: Boolean;
+  FlowOpsDataDetected: Boolean;
+  ExistingAdminDetected: Boolean;
+  InstallMode: String;
+  InstalledVersion: String;
+  UseExistingDatabase: Boolean;
+  NewDatabaseConfirmed: Boolean;
 
 function SetTimer(hWnd, nIDEvent, uElapse, lpTimerFunc: LongWord): LongWord;
   external 'SetTimer@user32.dll stdcall';
@@ -112,6 +131,56 @@ begin Result := AppPort; end;
 function BooleanText(Value: Boolean): String;
 begin
   if Value then Result := 'True' else Result := 'False';
+end;
+
+function DatabaseModeText(Value: Boolean): String;
+begin
+  if Value then Result := 'existing' else Result := 'new';
+end;
+
+function JsonBoolean(Value: Boolean): String;
+begin
+  if Value then Result := 'true' else Result := 'false';
+end;
+
+function VersionPart(const Value: String; PartIndex: Integer): Integer;
+var I, StartAt, CurrentPart: Integer; Token: String;
+begin
+  StartAt := 1; CurrentPart := 0;
+  for I := 1 to Length(Value) + 1 do
+    if (I > Length(Value)) or (Value[I] = '.') then
+    begin
+      if CurrentPart = PartIndex then
+      begin
+        Token := Copy(Value, StartAt, I - StartAt);
+        Result := StrToIntDef(Token, 0);
+        Exit;
+      end;
+      CurrentPart := CurrentPart + 1;
+      StartAt := I + 1;
+    end;
+  Result := 0;
+end;
+
+function CompareVersionText(const LeftValue, RightValue: String): Integer;
+var I, LeftPart, RightPart: Integer;
+begin
+  for I := 0 to 3 do
+  begin
+    LeftPart := VersionPart(LeftValue, I);
+    RightPart := VersionPart(RightValue, I);
+    if LeftPart < RightPart then begin Result := -1; Exit; end;
+    if LeftPart > RightPart then begin Result := 1; Exit; end;
+  end;
+  Result := 0;
+end;
+
+function InstallModeMessage: String;
+begin
+  if InstallMode = 'upgrade' then Result := 'Kovax FlowOps ' + InstalledVersion + ' is installed. This setup will upgrade it to {#AppVersion}.'
+  else if InstallMode = 'repair' then Result := 'Kovax FlowOps ' + InstalledVersion + ' is already installed. This setup can repair it.'
+  else if FlowOpsDataDetected then Result := 'Existing Kovax FlowOps data was found. This setup will reinstall the application with your choice of database.'
+  else Result := 'Fresh installation: no existing Kovax FlowOps application or database was detected.';
 end;
 
 procedure LayoutQueryPage(Page: TInputQueryWizardPage);
@@ -412,6 +481,60 @@ begin
   StringChangeEx(Result, #13, '', True);
 end;
 
+function DetectFlowOpsService: Boolean;
+var Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{sys}\sc.exe'), 'query KovaxFlowOps', '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+end;
+
+function DetectInstalledFlowOps: Boolean;
+var VersionText: String; Key: String;
+begin
+  Result := False; InstalledVersion := '';
+  Key := 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{8B58D1C2-7FD1-4CF7-9B49-0B2AE24C1A4E}_is1';
+  if RegQueryStringValue(HKLM, Key, 'DisplayVersion', VersionText) then begin Result := True; InstalledVersion := VersionText; end;
+  if IsWin64 and RegQueryStringValue(HKLM32, Key, 'DisplayVersion', VersionText) then begin Result := True; if InstalledVersion = '' then InstalledVersion := VersionText; end;
+  if FileExists(ExpandConstant('{autopf}\Kovax FlowOps\KovaxFlowOps.exe')) then Result := True;
+  ServiceDetected := DetectFlowOpsService;
+  if ServiceDetected then Result := True;
+  ProgramDataDetected := DirExists(DataRoot);
+  AppInstalled := Result;
+  Log('Existing app detected: ' + BooleanText(Result));
+  Log('Installed version: ' + InstalledVersion);
+  Log('Service detected: ' + BooleanText(ServiceDetected));
+  Log('ProgramData detected: ' + BooleanText(ProgramDataDetected));
+end;
+
+procedure DetectFlowOpsDatabase;
+var OutFile, Script, OutputText: String; Output: AnsiString; Code: Integer;
+begin
+  ExtractTemporaryFile('inspect-flowops.ps1');
+  Script := ExpandConstant('{tmp}\inspect-flowops.ps1'); OutFile := ExpandConstant('{tmp}\flowops-database.txt'); DeleteFile(OutFile);
+  Exec(PsPath, '-NoProfile -ExecutionPolicy Bypass -File "' + Script + '" -DataRoot "' + DataRoot + '" -OutputFile "' + OutFile + '" -PsqlPath "' + PgBinDir + '\psql.exe"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  FlowOpsDatabaseDetected := False; ExistingAdminDetected := False;
+  if LoadStringFromFile(OutFile, Output) then begin
+    OutputText := Output;
+    FlowOpsDatabaseDetected := DetectionValue(OutputText, 'DB_DETECTED') = '1';
+    FlowOpsDataDetected := DetectionValue(OutputText, 'DATA_DETECTED') = '1';
+    ExistingAdminDetected := DetectionValue(OutputText, 'ADMIN_DETECTED') = '1';
+    Log('Existing ADMIN count: ' + DetectionValue(OutputText, 'ADMIN_COUNT'));
+  end;
+  Log('FlowOps DB detected: ' + BooleanText(FlowOpsDatabaseDetected));
+  Log('FlowOps data/config detected: ' + BooleanText(FlowOpsDataDetected));
+  Log('Existing ADMIN detected: ' + BooleanText(ExistingAdminDetected));
+end;
+
+procedure LayoutFlowDbPage;
+var Margin, Top: Integer;
+begin
+  Margin := ScaleX(16); Top := ScaleY(8);
+  FlowDbIntroLabel.Left := Margin; FlowDbIntroLabel.Top := Top; FlowDbIntroLabel.Width := FlowDbPage.SurfaceWidth - Margin * 2; FlowDbIntroLabel.Height := ScaleY(60); FlowDbIntroLabel.AutoSize := False; FlowDbIntroLabel.WordWrap := True;
+  Top := Top + ScaleY(70);
+  FlowDbExistingRadio.Left := ScaleX(28); FlowDbExistingRadio.Top := Top; FlowDbExistingRadio.Width := FlowDbPage.SurfaceWidth - ScaleX(48); FlowDbExistingRadio.Height := ScaleY(36);
+  FlowDbNewRadio.Left := ScaleX(28); FlowDbNewRadio.Top := Top + ScaleY(52); FlowDbNewRadio.Width := FlowDbPage.SurfaceWidth - ScaleX(48); FlowDbNewRadio.Height := ScaleY(36);
+  FlowDbConfirmLabel.Left := Margin; FlowDbConfirmLabel.Top := Top + ScaleY(105); FlowDbConfirmLabel.Width := FlowDbPage.SurfaceWidth - Margin * 2; FlowDbConfirmLabel.Height := ScaleY(65); FlowDbConfirmLabel.AutoSize := False; FlowDbConfirmLabel.WordWrap := True;
+end;
+
 function DetectPostgres: Boolean;
   var OutFile, DetectionScript, OutputText, ExecParameters: String;
       Output: AnsiString; Code: Integer; ExecStarted: Boolean;
@@ -476,17 +599,31 @@ end;
 procedure InitializeWizard;
 begin
   AppPort := '8080'; DataRoot := ExpandConstant('{commonappdata}\Kovax FlowOps');
+  DetectInstalledFlowOps;
+  if not AppInstalled then InstallMode := 'fresh'
+  else if InstalledVersion = '' then InstallMode := 'repair'
+  else if CompareVersionText(InstalledVersion, '{#AppVersion}') < 0 then InstallMode := 'upgrade'
+  else InstallMode := 'repair';
   DbChoicePage := CreateCustomPage(wpSelectDir, 'Database setup', 'Choose how to provide PostgreSQL');
-  DbIntroLabel := TNewStaticText.Create(DbChoicePage.Surface); DbIntroLabel.Parent := DbChoicePage.Surface; DbIntroLabel.Caption := 'PostgreSQL is used to store FlowOps data.';
+  DbIntroLabel := TNewStaticText.Create(DbChoicePage.Surface); DbIntroLabel.Parent := DbChoicePage.Surface; DbIntroLabel.Caption := 'PostgreSQL is used to store FlowOps data.' + #13#10 + InstallModeMessage;
   DbInstalledRadio := TNewRadioButton.Create(DbChoicePage.Surface); DbInstalledRadio.Parent := DbChoicePage.Surface; DbInstalledRadio.Caption := 'Use the PostgreSQL installation already on this computer';
   DbAutomaticRadio := TNewRadioButton.Create(DbChoicePage.Surface); DbAutomaticRadio.Parent := DbChoicePage.Surface; DbAutomaticRadio.Caption := 'Install PostgreSQL automatically';
   PostgreSQLDetected := DetectPostgres;
+  DetectFlowOpsDatabase;
+  if (not AppInstalled) and FlowOpsDataDetected then InstallMode := 'reinstall';
   DbStatusLabel := TNewStaticText.Create(DbChoicePage.Surface); DbStatusLabel.Parent := DbChoicePage.Surface;
   { Temporary development-build diagnostics: remove this appended line when no longer needed. }
   DbStatusLabel.Caption := PgDetectionSummary + #13#10#13#10 + PgDiagnosticSummary;
   if PostgreSQLDetected then DbInstalledRadio.Checked := True else DbAutomaticRadio.Checked := True;
   LayoutDatabasePage;
-  DbAdminPage := CreateInputQueryPage(DbChoicePage.ID, 'PostgreSQL administrator', 'Connect to PostgreSQL', 'These credentials are used only to create the FlowOps database and are discarded.');
+  FlowDbPage := CreateCustomPage(DbChoicePage.ID, 'Database setup', 'Choose the Kovax FlowOps database');
+  FlowDbIntroLabel := TNewStaticText.Create(FlowDbPage.Surface); FlowDbIntroLabel.Parent := FlowDbPage.Surface; FlowDbIntroLabel.Caption := 'Existing Kovax FlowOps data was found.';
+  FlowDbExistingRadio := TNewRadioButton.Create(FlowDbPage.Surface); FlowDbExistingRadio.Parent := FlowDbPage.Surface; FlowDbExistingRadio.Caption := 'Use existing database - keep users, tasks, projects, reports and settings.';
+  FlowDbNewRadio := TNewRadioButton.Create(FlowDbPage.Surface); FlowDbNewRadio.Parent := FlowDbPage.Surface; FlowDbNewRadio.Caption := 'Start with a new database - create a clean Kovax FlowOps database.';
+  FlowDbConfirmLabel := TNewStaticText.Create(FlowDbPage.Surface); FlowDbConfirmLabel.Parent := FlowDbPage.Surface; FlowDbConfirmLabel.Caption := 'Starting new requires explicit confirmation. A backup will be created and the old database will be archived before a fresh database is created.';
+  FlowDbExistingRadio.Checked := True; LayoutFlowDbPage;
+  UseExistingDatabase := FlowOpsDatabaseDetected or FlowOpsDataDetected;
+  DbAdminPage := CreateInputQueryPage(FlowDbPage.ID, 'PostgreSQL administrator', 'Connect to PostgreSQL', 'These credentials are used only to create or archive a database and are discarded.');
   DbAdminPage.Add('Host:', False); DbAdminPage.Add('Port:', False); DbAdminPage.Add('Administrator username:', False); DbAdminPage.Add('Administrator password:', True);
   DbAdminPage.Values[0] := 'localhost'; DbAdminPage.Values[1] := '5432'; DbAdminPage.Values[2] := 'postgres';
   LayoutQueryPage(DbAdminPage);
@@ -499,7 +636,19 @@ end;
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
-  if CurPageID = DbChoicePage.ID then InstallPostgres := DbAutomaticRadio.Checked;
+  if CurPageID = DbChoicePage.ID then begin
+    InstallPostgres := DbAutomaticRadio.Checked; Log('PostgreSQL detected: ' + BooleanText(PostgreSQLDetected));
+    if AppInstalled and (InstallMode = 'repair') then
+      if MsgBox('Kovax FlowOps ' + InstalledVersion + ' is already installed.' + #13#10#13#10 + 'Continue with a repair installation?', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
+  end;
+  if CurPageID = FlowDbPage.ID then begin
+    UseExistingDatabase := FlowDbExistingRadio.Checked;
+    Log('Selected database mode: ' + DatabaseModeText(UseExistingDatabase));
+    if not UseExistingDatabase then begin
+      if MsgBox('Start with a new Kovax FlowOps database?' + #13#10#13#10 + 'Existing company data will no longer be used by this installation. A backup will be created before continuing.', mbConfirmation, MB_YESNO) <> IDYES then begin Result := False; Exit; end;
+      NewDatabaseConfirmed := True;
+    end;
+  end;
   if CurPageID = AdminPage.ID then begin
     if Trim(AdminPage.Values[0]) = '' then begin MsgBox('Enter the administrator name.', mbError, MB_OK); Result := False; end;
     if Pos('@', AdminPage.Values[1]) < 2 then begin MsgBox('Enter a valid administrator email.', mbError, MB_OK); Result := False; end;
@@ -510,7 +659,9 @@ end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  Result := (PageID = DbAdminPage.ID) and InstallPostgres;
+  Result := ((PageID = DbAdminPage.ID) and (InstallPostgres or ((FlowOpsDatabaseDetected or FlowOpsDataDetected) and FlowDbExistingRadio.Checked))) or
+    ((PageID = FlowDbPage.ID) and (not (FlowOpsDatabaseDetected or FlowOpsDataDetected))) or
+    ((PageID = AdminPage.ID) and (FlowOpsDatabaseDetected or FlowOpsDataDetected) and FlowDbExistingRadio.Checked);
 end;
 
 function ConfigureDatabase: Boolean;
@@ -518,7 +669,8 @@ var Json: String; Code: Integer; InputPath: String;
 begin
   Result := False;
   InputPath := ExpandConstant('{tmp}\flowops-setup.json');
-  Json := '{"host":"' + JsonEscape(DbAdminPage.Values[0]) + '","port":"' + JsonEscape(DbAdminPage.Values[1]) + '","adminUser":"' + JsonEscape(DbAdminPage.Values[2]) + '","postgresAdminPassword":"' + JsonEscape(DbAdminPage.Values[3]) + '","postgresBin":"' + JsonEscape(PgBinDir) + '","postgresService":"' + JsonEscape(PgServiceName) + '","postgresStatus":"' + JsonEscape(PgServiceStatus) + '","postgresVersion":"' + JsonEscape(PgMajorVersion) + '","postgresDetection":"' + JsonEscape(PgDetectionMessage) + '","appUser":"kovax_user","database":"kovax_flowops","appPort":"' + JsonEscape(AppPort) + '","adminName":"' + JsonEscape(AdminPage.Values[0]) + '","adminEmail":"' + JsonEscape(AdminPage.Values[1]) + '","adminPassword":"' + JsonEscape(AdminPage.Values[2]) + '"}';
+  if FlowOpsDatabaseDetected and UseExistingDatabase then Log('Existing FlowOps database selected; preserved without destructive schema operations') else Log('New FlowOps database selected; backup/archive will be performed when an old database exists');
+  Json := '{"host":"' + JsonEscape(DbAdminPage.Values[0]) + '","port":"' + JsonEscape(DbAdminPage.Values[1]) + '","adminUser":"' + JsonEscape(DbAdminPage.Values[2]) + '","postgresAdminPassword":"' + JsonEscape(DbAdminPage.Values[3]) + '","postgresBin":"' + JsonEscape(PgBinDir) + '","postgresService":"' + JsonEscape(PgServiceName) + '","postgresStatus":"' + JsonEscape(PgServiceStatus) + '","postgresVersion":"' + JsonEscape(PgMajorVersion) + '","postgresDetection":"' + JsonEscape(PgDetectionMessage) + '","appUser":"kovax_user","database":"kovax_flowops","appPort":"' + JsonEscape(AppPort) + '","databaseMode":"' + DatabaseModeText(UseExistingDatabase) + '","flowopsDatabaseDetected":' + JsonBoolean(FlowOpsDatabaseDetected) + ',"adminName":"' + JsonEscape(AdminPage.Values[0]) + '","adminEmail":"' + JsonEscape(AdminPage.Values[1]) + '","adminPassword":"' + JsonEscape(AdminPage.Values[2]) + '"}';
   SaveStringToFile(InputPath, Json, False);
   Exec(PsPath, '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\tools\setup-database.ps1') + '" -InputFile "' + InputPath + '" -DataRoot "' + DataRoot + '"', '', SW_HIDE, ewWaitUntilTerminated, Code);
   DeleteFile(InputPath);
@@ -649,6 +801,7 @@ procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = wpFinished then
   begin
+    WizardForm.WizardBitmapImage2.Visible := False;
     WizardForm.FinishedHeadingLabel.Visible := False;
     WizardForm.FinishedLabel.Visible := False;
     WizardForm.RunList.Visible := False;

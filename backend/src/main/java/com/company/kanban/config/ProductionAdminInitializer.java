@@ -16,7 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Collectors;
 
-/** Creates the first administrator only when the production database has no users. */
+/** Creates the first administrator only when the production database has no administrator. */
 @Component
 @Profile("prod")
 public class ProductionAdminInitializer implements CommandLineRunner {
@@ -29,7 +29,7 @@ public class ProductionAdminInitializer implements CommandLineRunner {
         this.users=users; this.departments=departments; this.encoder=encoder; this.name=name; this.email=email; this.password=password; this.secretsFile=secretsFile;
     }
     @Override public void run(String... args) {
-        if (users.count() > 0 || name.isBlank() || email.isBlank() || password.isBlank()) return;
+        if (users.countByRole(Role.ADMIN) > 0 || name.isBlank() || email.isBlank() || password.isBlank()) return;
         Department department = departments.findByNameIgnoreCase("PPC").orElseThrow();
         users.save(new User(name.trim(), email.trim(), encoder.encode(password), Role.ADMIN, department));
         removeBootstrapCredentials();
