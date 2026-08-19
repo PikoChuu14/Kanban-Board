@@ -29,6 +29,7 @@ backups/
 run/
 dist/
 installer/payload/
+installer/prerequisites/postgresql-installer.exe
 dist/installer/
 backend/target/
 frontend/dist/
