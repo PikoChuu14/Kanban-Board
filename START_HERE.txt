@@ -4,7 +4,7 @@ FIRST-TIME INSTALLATION
 1. Copy the versioned FlowOps-Setup-<version>.exe file to the Windows server.
 2. Double-click the installer and follow the wizard.
 3. Enter the first administrator account when asked.
-4. Click Install, then open FlowOps.
+4. Click Install, then open FlowOps Server.
 
 NORMAL USE
 FlowOps starts automatically with Windows.
@@ -13,3 +13,17 @@ Backup: Start Menu → FlowOps → Backup FlowOps
 Restore: Start Menu → FlowOps → Restore FlowOps
 
 Laragon comparison: start.bat is like Start All; stop.bat is like Stop All; pgAdmin is like phpMyAdmin; application.properties is like .env.
+FLOWOPS CENTRAL SERVER AND CLIENTS
+==================================
+
+Run this server installer on ONE always-on company machine only.
+Other Windows computers must not run the server installer or install PostgreSQL.
+
+WINDOWS STAFF CLIENT
+1. IT assigns a stable server URL using internal DNS, a reserved/static IP, or a DHCP reservation.
+2. IT builds or supplies FlowOps-Client-Setup.exe.
+3. Run it on the staff PC and enter that central server URL.
+4. Click Test Connection, continue setup, then launch FlowOps from the Desktop or Start Menu.
+5. To change the URL later, open Start Menu → FlowOps → Configure FlowOps Client.
+
+The client stores only the server URL and connects to the same central server/database. Edge or Chrome opens in app mode; the default browser is used only when neither app-mode browser is available.

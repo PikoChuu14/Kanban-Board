@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import NotificationBell from "./NotificationBell";
 import FlowOpsLogo from "./FlowOpsLogo";
+import ConnectionStatus from "./ConnectionStatus";
 
 const icons = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
@@ -11,6 +12,7 @@ const icons = {
   report: <><path d="M6 3h9l3 3v15H6z" /><path d="M9 11h6M9 15h6M9 7h3" /></>,
   users: <><circle cx="9" cy="8" r="3"/><path d="M3 20c.5-4 2.5-6 6-6s5.5 2 6 6"/><path d="M17 8v6M14 11h6"/></>,
   settings: <><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A8 8 0 0 0 15 6l-.3-2.5h-4L10.4 6A8 8 0 0 0 9 7.1l-2.4-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1A8 8 0 0 0 10.4 18l.3 2.5h4L15 18a8 8 0 0 0 1.5-1.1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1z"/></>,
+  network: <><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M8.5 10.5a5 5 0 0 1 7 0M10.5 12.5a2.2 2.2 0 0 1 3 0"/></>,
   menu: <><path d="M4 7h16M4 12h16M4 17h16" /></>,
   chevronLeft: <path d="m15 6-6 6 6 6" />,
   chevronRight: <path d="m9 6 6 6-6 6" />,
@@ -33,7 +35,7 @@ function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogo
     ...(canSeeTeam ? [{ id: "staff", label: "Team", icon: "team" }] : []),
     ...(user?.role === "MANAGER" ? [{ id: "reviews", label: "Reviews", icon: "reviews" }] : []),
     ...(!isAdmin ? [{ id: "report", label: user?.role === "STAFF" ? "Daily Report" : "Daily Reports", icon: "report" }] : []),
-    ...(isAdmin ? [{ id: "users-admin", label: "Users", icon: "users" }, { id: "data-management", label: "Settings", icon: "settings" }] : []),
+    ...(isAdmin ? [{ id: "users-admin", label: "Users", icon: "users" }, { id: "data-management", label: "Data Management", icon: "settings" }, { id: "client-access", label: "Client Access", icon: "network" }] : []),
   ];
 
   useEffect(() => {
@@ -62,7 +64,10 @@ function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogo
       </div>
     </aside>
     <main className="app-main">
-      <NotificationBell onNavigate={onNotificationNavigate} />
+      <div className="header-actions">
+        <ConnectionStatus />
+        <NotificationBell onNavigate={onNotificationNavigate} />
+      </div>
       <header className="mobile-topbar"><button type="button" className="btn-icon" aria-label="Open navigation" onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button><div className="mobile-brand"><FlowOpsLogo className="brand-mark" decorative /><strong>FlowOps</strong></div><div className="avatar">{user?.name?.slice(0, 1)?.toUpperCase() || "U"}</div></header>
       <div className="app-content">{children}</div>
     </main>

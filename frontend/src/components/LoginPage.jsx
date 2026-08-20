@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import FlowOpsLogo from "./FlowOpsLogo";
+import InstallFlowOps from "./InstallFlowOps";
 
 function MailIcon() {
   return (
@@ -133,6 +134,8 @@ function LoginPage() {
             {!loading && <span aria-hidden="true">→</span>}
           </button>
         </form>
+
+        <InstallFlowOps compact />
 
         <p className="login-help">Need help signing in? Contact your administrator.</p>
         <p className="login-footer">For authorized users only.</p>

@@ -1,7 +1,10 @@
 # FlowOps Configuration
 server.port=8080
+server.address=0.0.0.0
 spring.datasource.url=jdbc:postgresql://localhost:5432/flowops
 spring.datasource.username=flowops_user
 spring.datasource.password=CHANGE_ME
-app.base-url=http://localhost:8080
+# Public address used in activation and client onboarding links. Leave blank
+# until IT assigns a stable LAN hostname/IP; detected DHCP addresses are not saved.
+app.base-url=${APP_BASE_URL:}
 app.mail.enabled=false

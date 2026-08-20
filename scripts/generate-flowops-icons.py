@@ -101,6 +101,19 @@ def main():
         resized = master.resize((size, size), Image.Resampling.LANCZOS)
         resized.save(public / f"flowops-icon-{size}.png", optimize=True)
 
+        # Maskable artwork keeps the complete mark inside the platform safe zone
+        # while using an opaque brand-colour background at every edge.
+        maskable = Image.new("RGBA", (size, size), "#12344c")
+        safe_size = round(size * 0.8)
+        safe_mark = master.resize((safe_size, safe_size), Image.Resampling.LANCZOS)
+        offset = (size - safe_size) // 2
+        maskable.alpha_composite(safe_mark, (offset, offset))
+        maskable.save(public / f"flowops-maskable-{size}.png", optimize=True)
+
+    master.resize((180, 180), Image.Resampling.LANCZOS).save(
+        public / "apple-touch-icon.png", optimize=True
+    )
+
 
 if __name__ == "__main__":
     main()

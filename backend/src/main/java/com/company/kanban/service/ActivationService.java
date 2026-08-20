@@ -19,9 +19,11 @@ public class ActivationService {
     private final UserRepository users; private final ActivationTokenRepository tokens; private final PasswordEncoder encoder;
     private final SecureRandom random = new SecureRandom(); private final String baseUrl; private final long expirationHours;
     public ActivationService(UserRepository users, ActivationTokenRepository tokens, PasswordEncoder encoder,
-            @Value("${app.base-url:http://localhost:8080}") String baseUrl,
+            @Value("${app.base-url:}") String baseUrl,
             @Value("${app.activation.expiration-hours:48}") long expirationHours) {
-        this.users=users; this.tokens=tokens; this.encoder=encoder; this.baseUrl=baseUrl; this.expirationHours=expirationHours;
+        this.users=users; this.tokens=tokens; this.encoder=encoder;
+        this.baseUrl=baseUrl == null || baseUrl.isBlank() ? "http://localhost:8080" : baseUrl.trim();
+        this.expirationHours=expirationHours;
     }
     @Transactional
     public ActivationLinkResponse createLink(Long userId) {

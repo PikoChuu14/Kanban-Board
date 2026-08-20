@@ -2,6 +2,12 @@
 
 Log in with the first administrator created by setup. Existing authorization boundaries remain in force: only an `ADMIN` can manage company-wide accounts or database backups.
 
+## Client Access and PWA installation
+
+Open **Client Access** in the administrator sidebar to see the local address, the explicitly configured company address, and all suitable detected LAN IPv4 candidates. A single detected address is marked as a temporary suggestion only. If detection is ambiguous, configure the stable `APP_BASE_URL` instead of guessing between adapters.
+
+Install the full `FlowOps-Setup-x.x.x.exe` package on the single server machine only. During HTTP LAN deployment, install `FlowOps-Client-Setup.exe` on Windows staff PCs and enter the central server URL. The launcher uses Edge/Chrome app mode and stores only that URL. Android/browser PWA installation and iPhone/iPad Safari **Share → Add to Home Screen** remain available. Client devices do not install PostgreSQL or a second backend.
+
 ## User Management
 
 Open **Users** in the administrator sidebar. The page lists all accounts and can be filtered by Pending Activation, Active, or Disabled; search matches names and email addresses.

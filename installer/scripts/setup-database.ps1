@@ -16,10 +16,12 @@ $useExisting = ($input.databaseMode -eq 'existing')
 $dbPassword = ''
 $jwt = ''; $jwtEncoding = ''
 $existingHost = ''; $existingPort = ''; $existingDb = ''; $existingUser = ''
+$baseUrl = ''
 if ($useExisting -and (Test-Path -LiteralPath $existingApplication) -and (Test-Path -LiteralPath $existingPgpass)) {
   $existingUrl = (Get-Content -LiteralPath $existingApplication | Where-Object { $_ -like 'spring.datasource.url=*' } | Select-Object -First 1) -replace '^spring.datasource.url=', ''
   if ($existingUrl -match '^jdbc:postgresql://([^:/]+)(?::(\d+))?/([^?]+)') { $existingHost=$Matches[1]; $existingPort=$Matches[2]; $existingDb=$Matches[3] }
   $existingUser = (Get-Content -LiteralPath $existingApplication | Where-Object { $_ -like 'spring.datasource.username=*' } | Select-Object -First 1) -replace '^spring.datasource.username=', ''
+  $baseUrl = (Get-Content -LiteralPath $existingApplication | Where-Object { $_ -like 'app.base-url=*' } | Select-Object -First 1) -replace '^app.base-url=', ''
   if ($existingHost) { $input.host=$existingHost }; if ($existingPort) { $input.port=$existingPort }; if ($existingDb) { $input.database=$existingDb }; if ($existingUser) { $input.appUser=$existingUser }
   $dbPassword = (Get-Content -LiteralPath $existingPgpass | Select-Object -First 1) -split ':' | Select-Object -Last 1
   $jwtConfig = Resolve-JwtSecret $secretsPath; $jwt=$jwtConfig.Secret; $jwtEncoding=$jwtConfig.Encoding
@@ -28,6 +30,11 @@ if ($useExisting -and (Test-Path -LiteralPath $existingApplication) -and (Test-P
   $dbPassword = New-Secret
   $jwtConfig = Resolve-JwtSecret $secretsPath; $jwt = $jwtConfig.Secret; $jwtEncoding = $jwtConfig.Encoding
 }
+$configuredBaseUrl = [Environment]::GetEnvironmentVariable('APP_BASE_URL')
+if ($configuredBaseUrl) { $baseUrl = $configuredBaseUrl.TrimEnd('/') }
+# Never persist an automatically detected DHCP address. APP_BASE_URL or an
+# existing explicit app.base-url is the only source for the company URL.
+if (-not $baseUrl -or $baseUrl -match '^http://localhost(?::\d+)?$') { $baseUrl = '' }
 $adminPasswordFile = Join-Path $DataRoot 'runtime\postgres-admin.pgpass.tmp'
 $sqlFile = Join-Path $DataRoot 'runtime\database-setup.sql'
 try {
@@ -91,7 +98,7 @@ server.address=0.0.0.0
 spring.datasource.url=jdbc:postgresql://$($input.host):$($input.port)/$($input.database)
 spring.datasource.username=$($input.appUser)
 spring.datasource.password=`${DB_PASSWORD}
-app.base-url=http://localhost:$($input.appPort)
+app.base-url=$baseUrl
 app.mail.enabled=false
 app.backup.directory=$([IO.Path]::Combine($DataRoot, 'backups').Replace('\','/'))
 app.postgres.bin=$(([string]$input.postgresBin).Replace('\','/'))

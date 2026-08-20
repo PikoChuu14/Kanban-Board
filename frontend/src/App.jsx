@@ -20,6 +20,7 @@ import DailyReportPage from "./pages/DailyReportPage";
 import TeamDailyReportsPage from "./pages/TeamDailyReportsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import DataManagementPage from "./pages/DataManagementPage";
+import ClientAccessPage from "./pages/ClientAccessPage";
 import ActivationPage from "./pages/ActivationPage";
 import { apiFetch } from "./api/apiFetch";
 import { useAuth } from "./context/AuthContext";
@@ -55,7 +56,7 @@ function App() {
   const isManager = user?.role === "MANAGER";
   const canManageBoards = isAdmin || isManager;
   const canDeleteTask = isAdmin || isManager;
-  const initialView = window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : "dashboard";
+  const initialView = window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : window.location.pathname === "/admin/settings/client-access" ? "client-access" : "dashboard";
   const [activeView, setActiveView] = useState(initialView);
   const [selectedStaffId, setSelectedStaffId] = useState("");
   const [staffRefreshKey, setStaffRefreshKey] = useState(0);
@@ -82,7 +83,7 @@ function App() {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dropIndicator, setDropIndicator] = useState(null);
   const [dragPreview, setDragPreview] = useState(null);
-  const [permissionMessage, setPermissionMessage] = useState("");
+  const [, setPermissionMessage] = useState("");
   const draggedTaskRef = useRef(null);
   const dropIndicatorRef = useRef(null);
   const pointerDownRef = useRef(null);
@@ -140,7 +141,7 @@ function App() {
     // Permission errors are handled silently in the workspace. Clear any
     // stale message when switching accounts or roles.
     setPermissionMessage("");
-    setActiveView(window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : "dashboard");
+    setActiveView(window.location.pathname === "/admin/users" ? "users-admin" : window.location.pathname === "/admin/settings/data-management" ? "data-management" : window.location.pathname === "/admin/settings/client-access" ? "client-access" : "dashboard");
   }, [isAuthenticated, user]);
 
   useEffect(() => {
@@ -231,6 +232,19 @@ function App() {
     setColumns([]);
     setTasksByColumn({});
   }, [activeView, selectedBoardId, loadBoard]);
+
+  useEffect(() => {
+    if (!isAuthenticated || selectedBoardId === null || !["project", "staff"].includes(activeView)) return undefined;
+    const refresh = () => { if (document.visibilityState === "visible") loadBoard(selectedBoardId); };
+    const interval = window.setInterval(refresh, 20000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [activeView, isAuthenticated, selectedBoardId, loadBoard]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -627,7 +641,7 @@ function App() {
         if (view === "dashboard") setStaffRefreshKey((currentKey) => currentKey + 1);
         if (view === "report") { setSelectedReportUserId(null); setSelectedReportDate(null); }
         setActiveView(view);
-        const path=view==='users-admin'?'/admin/users':view==='data-management'?'/admin/settings/data-management':'/';
+        const path=view==='users-admin'?'/admin/users':view==='data-management'?'/admin/settings/data-management':view==='client-access'?'/admin/settings/client-access':'/';
         window.history.pushState({},'',path);
       }}
       onNotificationNavigate={(notification) => {
@@ -660,6 +674,8 @@ function App() {
         <UserManagementPage departments={departments} />
       ) : activeView === "data-management" && isAdmin ? (
         <DataManagementPage />
+      ) : activeView === "client-access" && isAdmin ? (
+        <ClientAccessPage />
       ) : activeView === "reviews" ? (
         <ReviewQueuePage onRefresh={() => setStaffRefreshKey((currentKey) => currentKey + 1)} />
       ) : activeView === "history" ? (

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { apiFetch } from "../api/apiFetch";
+import FlowOpsLogo from "../components/FlowOpsLogo";
 
 export default function ActivationPage() {
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
@@ -14,7 +15,7 @@ export default function ActivationPage() {
       setComplete(true);
     } catch(error) { setMessage(error.message); } finally { setSubmitting(false); }
   }
-  return <div className="activation-page"><div className="activation-card"><div className="brand-mark">K<span /></div>
+  return <div className="activation-page"><div className="activation-card"><FlowOpsLogo className="brand-mark" decorative />
     {complete ? <><h1>Account activated</h1><p>Your password is set and your account is ready.</p><a className="primary-button" href="/login">Continue to sign in</a></> : <>
       <p className="eyebrow">FlowOps</p><h1>Activate your account</h1><p>Choose a password to finish setting up your account.</p>
       <form onSubmit={submit}><label>New password<input type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} required minLength="8" /></label>

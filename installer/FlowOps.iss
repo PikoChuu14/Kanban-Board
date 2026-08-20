@@ -53,11 +53,11 @@ Name: "{commonappdata}\FlowOps\backups"
 Name: "{commonappdata}\FlowOps\runtime"
 
 [Icons]
-Name: "{group}\Open FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"
+Name: "{group}\Open FlowOps Server"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"
 Name: "{group}\Backup FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\backup-installed.ps1"""
 Name: "{group}\Restore FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\tools\restore-installed.ps1"""
 Name: "{group}\FlowOps Documentation"; Filename: "{app}\docs"
-Name: "{commondesktop}\FlowOps"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"; Tasks: desktopicon
+Name: "{commondesktop}\FlowOps Server"; Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:{code:GetPort}"; IconFilename: "{app}\FlowOps.ico"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
@@ -67,6 +67,8 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 ; same FlowOps service, so retaining the legacy shortcut looks like a duplicate app.
 Type: files; Name: "{commondesktop}\Kovax FlowOps.lnk"
 Type: files; Name: "{userdesktop}\Kovax FlowOps.lnk"
+Type: files; Name: "{commondesktop}\FlowOps.lnk"
+Type: files; Name: "{userdesktop}\FlowOps.lnk"
 
 [UninstallRun]
 Filename: "{app}\FlowOps.exe"; Parameters: "stop"; Flags: runhidden waituntilterminated
@@ -842,7 +844,12 @@ begin
     Abort;
   end;
   Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="Kovax FlowOps"', '', SW_HIDE, ewWaitUntilTerminated, Code);
-  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall add rule name="FlowOps" dir=in action=allow protocol=TCP localport=' + AppPort + ' profile=private', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall delete rule name="FlowOps"', '', SW_HIDE, ewWaitUntilTerminated, Code);
+  if (not Exec(ExpandConstant('{sys}\netsh.exe'), 'advfirewall firewall add rule name="FlowOps" dir=in action=allow protocol=TCP localport=' + AppPort + ' profile=private,domain', '', SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
+  begin
+    MsgBox('The FlowOps firewall rule could not be created. Allow inbound TCP port ' + AppPort + ' on Private and Domain networks before connecting client devices.', mbError, MB_OK);
+    Abort;
+  end;
   if (not Exec(ExpandConstant('{app}\FlowOps.exe'), 'start', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, Code)) or (Code <> 0) then
   begin
     MsgBox('The FlowOps service could not be started. See ' + DataRoot + '\logs\FlowOps.wrapper.log.', mbError, MB_OK);
