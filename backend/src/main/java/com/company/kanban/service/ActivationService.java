@@ -1,5 +1,6 @@
 package com.company.kanban.service;
 
+import com.company.kanban.config.CompanyAddress;
 import com.company.kanban.dto.ActivationLinkResponse;
 import com.company.kanban.entity.*;
 import com.company.kanban.repository.*;
@@ -17,23 +18,29 @@ import java.util.Base64;
 @Service
 public class ActivationService {
     private final UserRepository users; private final ActivationTokenRepository tokens; private final PasswordEncoder encoder;
-    private final SecureRandom random = new SecureRandom(); private final String baseUrl; private final long expirationHours;
+    private final SecureRandom random = new SecureRandom(); private final CompanyAddress companyAddress; private final long expirationHours;
     public ActivationService(UserRepository users, ActivationTokenRepository tokens, PasswordEncoder encoder,
-            @Value("${app.base-url:}") String baseUrl,
+            CompanyAddress companyAddress,
             @Value("${app.activation.expiration-hours:48}") long expirationHours) {
         this.users=users; this.tokens=tokens; this.encoder=encoder;
-        this.baseUrl=baseUrl == null || baseUrl.isBlank() ? "http://localhost:8080" : baseUrl.trim();
+        this.companyAddress=companyAddress;
         this.expirationHours=expirationHours;
     }
     @Transactional
     public ActivationLinkResponse createLink(Long userId) {
+        String baseUrl;
+        try {
+            baseUrl = companyAddress.requireActivationBaseUrl();
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
+        }
         User user = users.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         if (user.getStatus() != AccountStatus.PENDING_ACTIVATION) throw new ResponseStatusException(HttpStatus.CONFLICT, "Activation links are only available for pending accounts");
         tokens.deleteByUser(user);
         byte[] bytes = new byte[32]; random.nextBytes(bytes);
         String raw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes); LocalDateTime expires = LocalDateTime.now().plusHours(expirationHours);
         tokens.save(new ActivationToken(user, hash(raw), expires));
-        return new ActivationLinkResponse(baseUrl.replaceAll("/$", "") + "/activate?token=" + raw, expires);
+        return new ActivationLinkResponse(baseUrl + "/activate?token=" + raw, expires);
     }
     @Transactional
     public void activate(String rawToken, String password) {

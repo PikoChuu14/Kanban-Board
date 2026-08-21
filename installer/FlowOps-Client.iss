@@ -30,9 +30,9 @@ Source: "FlowOps.ico"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{localappdata}\FlowOps Client"
 
 [Icons]
-Name: "{group}\FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\FlowOps-Client.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"
-Name: "{group}\Configure FlowOps Client"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\FlowOps-Client.ps1"" -Configure"; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"
-Name: "{userdesktop}\FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\FlowOps-Client.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"; Tasks: desktopicon
+Name: "{group}\FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\FlowOps-Client.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"; IconIndex: 0
+Name: "{group}\Configure FlowOps Client"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\FlowOps-Client.ps1"" -Configure"; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"; IconIndex: 0
+Name: "{userdesktop}\FlowOps"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\FlowOps-Client.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\FlowOps.ico"; IconIndex: 0; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce

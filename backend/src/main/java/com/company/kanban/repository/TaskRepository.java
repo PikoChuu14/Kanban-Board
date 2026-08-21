@@ -24,6 +24,8 @@ public interface TaskRepository
 
     boolean existsByColumnBoardId(Long boardId);
 
+    boolean existsByAssigneeIdOrCreatedById(Long assigneeId, Long createdById);
+
     @org.springframework.data.jpa.repository.Query("""
             select distinct t from Task t
             join fetch t.column c

@@ -89,6 +89,7 @@ public class DemoDataSeeder implements CommandLineRunner {
     private Map<String, Department> seedDepartments() {
         Map<String, Department> result = new LinkedHashMap<>();
         for (String name : DEPARTMENT_NAMES) result.put(name, departments.save(new Department(name)));
+        result.put("Maintenance", departments.save(new Department("Maintenance")));
         return result;
     }
 

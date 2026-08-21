@@ -17,5 +17,6 @@ public class AdminUserController {
     @PutMapping("/{id}") public UserResponse update(@PathVariable Long id, @RequestBody UpdateUserRequest request) { return users.updateUser(id, request); }
     @PostMapping("/{id}/disable") public UserResponse disable(@PathVariable Long id) { return users.disable(id); }
     @PostMapping("/{id}/reactivate") public UserResponse reactivate(@PathVariable Long id) { return users.reactivate(id); }
+    @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable Long id) { users.deleteDisabledUser(id); }
     @PostMapping("/{id}/activation-link") public ActivationLinkResponse activationLink(@PathVariable Long id) { return activation.createLink(id); }
 }

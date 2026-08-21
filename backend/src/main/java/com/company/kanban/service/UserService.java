@@ -8,6 +8,10 @@ import com.company.kanban.entity.User;
 import com.company.kanban.entity.AccountStatus;
 import com.company.kanban.dto.UpdateUserRequest;
 import com.company.kanban.repository.DepartmentRepository;
+import com.company.kanban.repository.ActivationTokenRepository;
+import com.company.kanban.repository.DailyWorkReportRepository;
+import com.company.kanban.repository.NotificationRepository;
+import com.company.kanban.repository.TaskRepository;
 import com.company.kanban.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,15 +30,27 @@ public class UserService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivationTokenRepository activationTokenRepository;
+    private final TaskRepository taskRepository;
+    private final DailyWorkReportRepository dailyWorkReportRepository;
+    private final NotificationRepository notificationRepository;
 
     public UserService(
             UserRepository userRepository,
             DepartmentRepository departmentRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ActivationTokenRepository activationTokenRepository,
+            TaskRepository taskRepository,
+            DailyWorkReportRepository dailyWorkReportRepository,
+            NotificationRepository notificationRepository) {
 
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.passwordEncoder = passwordEncoder;
+        this.activationTokenRepository = activationTokenRepository;
+        this.taskRepository = taskRepository;
+        this.dailyWorkReportRepository = dailyWorkReportRepository;
+        this.notificationRepository = notificationRepository;
     }
 
     public List<UserResponse> getAllUsers() {
@@ -69,7 +85,11 @@ public class UserService {
             users = userRepository.findByStatus(AccountStatus.ACTIVE);
         } else {
             users = userRepository.findByDepartmentIdOrderByNameAsc(currentUser.getDepartment().getId())
-                    .stream().filter(user -> user.getRole() == Role.STAFF && user.getStatus() == AccountStatus.ACTIVE).toList();
+                    .stream()
+                    .filter(user -> user.getStatus() == AccountStatus.ACTIVE)
+                    .filter(user -> user.getRole() == Role.STAFF
+                            || user.getId().equals(currentUser.getId()))
+                    .toList();
         }
 
         return users.stream().map(this::toResponse).toList();
@@ -156,6 +176,26 @@ public class UserService {
     public UserResponse reactivate(Long id) {
         User user = requireUser(id); user.setStatus(user.getStatusBeforeDisabled() == AccountStatus.PENDING_ACTIVATION ? AccountStatus.PENDING_ACTIVATION : AccountStatus.ACTIVE); user.setStatusBeforeDisabled(null);
         log.info("ADMIN action: account reactivated id={}", id); return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public void deleteDisabledUser(Long id) {
+        User user = requireUser(id);
+        if (user.getStatus() != AccountStatus.DISABLED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only disabled users can be deleted");
+        }
+        if (taskRepository.existsByAssigneeIdOrCreatedById(id, id)
+                || dailyWorkReportRepository.existsByUserId(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "This user has task or report history and cannot be deleted; keep the account disabled instead"
+            );
+        }
+
+        activationTokenRepository.deleteByUser(user);
+        notificationRepository.deleteByRecipientId(id);
+        userRepository.delete(user);
+        log.info("ADMIN action: disabled user permanently deleted id={} email={}", id, user.getEmail());
     }
 
     private User requireUser(Long id) { return userRepository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found")); }

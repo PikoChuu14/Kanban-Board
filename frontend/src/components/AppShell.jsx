@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import NotificationBell from "./NotificationBell";
 import FlowOpsLogo from "./FlowOpsLogo";
 import ConnectionStatus from "./ConnectionStatus";
+import { useNotifications } from "../context/NotificationContext";
 
 const icons = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
@@ -23,6 +24,7 @@ function Icon({ name, size = 19 }) {
 }
 
 function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogout, children }) {
+  const { fetchUnreadCount } = useNotifications();
   const [collapsed, setCollapsed] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isAdmin = user?.role === "ADMIN";
@@ -44,7 +46,7 @@ function AppShell({ user, activeView, onNavigate, onNotificationNavigate, onLogo
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
-  const navigate = (view) => { onNavigate(view); setDrawerOpen(false); };
+  const navigate = (view) => { onNavigate(view); setDrawerOpen(false); void fetchUnreadCount(); };
   return <div className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
     <div className={`sidebar-overlay ${drawerOpen ? "is-visible" : ""}`} onClick={() => setDrawerOpen(false)} />
     <aside className={`sidebar ${drawerOpen ? "drawer-open" : ""}`}>

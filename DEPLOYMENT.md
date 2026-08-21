@@ -11,13 +11,22 @@ Client devices connect through the server URL:
 - preferred LAN name: `http://flowops-server:8080`
 - future recommended name: `https://flowops.company.local`
 
-Set `APP_BASE_URL` (or `app.base-url` in `C:\ProgramData\FlowOps\config\application.properties`) to the stable address employees use. Use an internal DNS hostname, a static/reserved server IP, or a DHCP reservation; do not save an automatically detected DHCP address as permanent configuration. Activation and onboarding links depend on this value. Restart the FlowOps service after changing the property. A trusted HTTPS hostname can replace the HTTP address later.
+Set `APP_BASE_URL` (or `app.base-url` in `C:\ProgramData\FlowOps\config\application.properties`) to the stable address employees use. Use an internal DNS hostname, a static/reserved server IP, or a DHCP reservation; do not save an automatically detected DHCP address as permanent configuration. Activation links use only this configured value and never the request host or a detected network adapter. In production, a missing, invalid, localhost, loopback, or wildcard value disables activation-link generation and shows the administrator a configuration error instead of creating a misleading link.
+
+For an installed Windows server, the exact configuration procedure is:
+
+1. Open `C:\ProgramData\FlowOps\config\application.properties` as an administrator.
+2. Set `app.base-url=http://flowops-server:8080` (or the stable reserved-IP/HTTPS URL selected by IT), with no trailing slash.
+3. Restart the **FlowOps** Windows service.
+4. Open **System → Client Access** and confirm **Company address: Configured** and **Activation links use: http://flowops-server:8080**.
+
+`APP_BASE_URL=http://flowops-server:8080` is the environment-variable equivalent for deployments that manage service environment variables. The installed properties file is usually simpler and is retained across upgrades. The development profile intentionally uses `http://localhost:5173`; this exception is not enabled in production.
 
 The handover runtime is one `app\flowops.jar` process plus PostgreSQL. Java 21 is required; Node, npm, Maven, Git, VS Code and Laragon are not required on the server.
 
 Install PostgreSQL, create database `flowops` and dedicated user `flowops_user`, then grant that user ownership of the database. Edit only `config\application.properties`. Run `scripts\setup.bat`, then `scripts\start.bat`. Rebranded upgrades continue using database names and credentials already recorded in their retained configuration.
 
-The installer allows inbound TCP 8080 on Windows Private and Domain profiles only. Public-profile access is intentionally not enabled. Find the server IPv4 address with `ipconfig`, or open **Client Access** as an administrator. Users on the same company network open `http://SERVER-IP:8080`; phones must be connected to the same Wi-Fi. Production uses same-origin `/api` calls, so phones never call their own localhost. PostgreSQL remains local to the server and its port must not be opened company-wide.
+The installer allows inbound TCP 8080 on Windows Private and Domain profiles only. Public-profile access is intentionally not enabled. Find the server IPv4 address with `ipconfig`, or open **Client Access** as an administrator. Detected addresses are diagnostic/testing candidates only and never replace `APP_BASE_URL`. Users on the same company network open `http://SERVER-IP:8080`; phones must be connected to the same Wi-Fi. Production uses same-origin `/api` calls, so phones never call their own localhost. PostgreSQL remains local to the server and its port must not be opened company-wide.
 
 The production profile uses Hibernate `update`, never `create-drop`. Demo data is profile-only and disabled. Logs are in `logs\flowops.log` with size/history rotation. For upgrades, stop the app, replace the JAR, back up the database, and start it again.
 

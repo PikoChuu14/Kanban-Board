@@ -7,4 +7,5 @@ public interface DailyWorkReportRepository extends JpaRepository<DailyWorkReport
     Optional<DailyWorkReport> findByUserIdAndReportDate(Long userId, LocalDate date);
     List<DailyWorkReport> findByReportDate(LocalDate date);
     List<DailyWorkReport> findByReportDateBetween(LocalDate start, LocalDate end);
+    boolean existsByUserId(Long userId);
 }

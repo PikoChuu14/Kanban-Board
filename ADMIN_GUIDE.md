@@ -4,7 +4,7 @@ Log in with the first administrator created by setup. Existing authorization bou
 
 ## Client Access and PWA installation
 
-Open **Client Access** in the administrator sidebar to see the local address, the explicitly configured company address, and all suitable detected LAN IPv4 candidates. A single detected address is marked as a temporary suggestion only. If detection is ambiguous, configure the stable `APP_BASE_URL` instead of guessing between adapters.
+Open **Client Access** in the administrator sidebar to see whether the company address is configured and usable, the activation-link base, and all suitable detected LAN IPv4 candidates. Detected addresses are diagnostics or temporary client-testing values only; FlowOps never promotes one to the permanent company address. Before employee onboarding, configure a stable internal DNS hostname such as `http://flowops-server:8080`, a reserved/static server IP, or a trusted HTTPS hostname as `APP_BASE_URL`/`app.base-url`.
 
 Install the full `FlowOps-Setup-x.x.x.exe` package on the single server machine only. During HTTP LAN deployment, install `FlowOps-Client-Setup.exe` on Windows staff PCs and enter the central server URL. The launcher uses Edge/Chrome app mode and stores only that URL. Android/browser PWA installation and iPhone/iPad Safari **Share → Add to Home Screen** remain available. Client devices do not install PostgreSQL or a second backend.
 
@@ -17,10 +17,12 @@ To onboard an employee:
 1. Select **Add User**.
 2. Enter the employee's name and unique email address.
 3. Choose a department from the live departments table and select `STAFF`, `MANAGER`, or `ADMIN` (the default is `STAFF`).
-4. Save the user. The account starts as `PENDING_ACTIVATION` and its activation link is copied when browser clipboard permission is available.
+4. Save the user. The account starts as `PENDING_ACTIVATION` and its activation link is copied when browser clipboard permission is available. If the company address is not usable, the user is still created but FlowOps displays: `FlowOps company address is not configured. Configure APP_BASE_URL before generating activation links.`
 5. If necessary, select **Copy Activation Link** in the user row and send it through an approved company channel. The link expires after 48 hours by default and generating a replacement invalidates the previous link.
 
 Employees choose their own password on the public activation page. Tokens are random, stored only as SHA-256 hashes, expire, and work once. Raw tokens and passwords are never logged.
+
+Activation links always start with the exact configured company address. Moving the server between Wi-Fi, Ethernet, or a phone hotspot does not change generated links. To configure an installed server, edit `C:\ProgramData\FlowOps\config\application.properties`, set `app.base-url=http://flowops-server:8080`, restart the **FlowOps** service, and verify the value on **Client Access**. Do not use localhost for production onboarding.
 
 Use **Edit** to change a user's name, department, role, or status. Department and role changes do not rewrite historical tasks or reports. Use **Disable** for offboarding and **Reactivate** to restore access. Accounts are deliberately not deleted: old task ownership and reporting attribution must remain intact. The application refuses to disable or demote the final active administrator.
 

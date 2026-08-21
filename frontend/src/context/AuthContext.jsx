@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { apiFetch } from "../api/apiFetch";
+import { clearFlowOpsAuthStorage } from "./authStorage.js";
 
 const AuthContext = createContext(null);
 const API_BASE_URL = "";
@@ -32,8 +33,7 @@ export function AuthProvider({ children }) {
         setUser(await response.json());
       } catch (error) {
         console.error("Failed to restore session:", error);
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
+        clearFlowOpsAuthStorage();
         setToken(null);
         setUser(null);
       } finally {
@@ -63,8 +63,7 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    clearFlowOpsAuthStorage();
 
     setToken(null);
     setUser(null);

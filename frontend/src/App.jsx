@@ -527,6 +527,10 @@ function App() {
     await loadBoards(createdBoard.departmentId, createdBoard.id);
   }
 
+  function handleDepartmentCreated(department) {
+    setDepartments((current) => [...current, department].sort((left, right) => left.name.localeCompare(right.name)));
+  }
+
   async function handleBoardUpdated(updatedBoard) {
     await loadBoards(updatedBoard.departmentId, updatedBoard.id);
   }
@@ -671,7 +675,7 @@ function App() {
     >
     <div className="app">
       {activeView === "users-admin" && isAdmin ? (
-        <UserManagementPage departments={departments} />
+        <UserManagementPage departments={departments} onDepartmentCreated={handleDepartmentCreated} />
       ) : activeView === "data-management" && isAdmin ? (
         <DataManagementPage />
       ) : activeView === "client-access" && isAdmin ? (

@@ -42,12 +42,13 @@ public class DataInitializer {
                 "PPC",
                 "PROD",
                 "RDD",
-                "QC"
+                "QC",
+                "Maintenance"
             };
 
             for (String name : departments) {
 
-                if (!departmentRepository.existsByName(name)) {
+                if (departmentRepository.findByNameIgnoreCase(name).isEmpty()) {
                     departmentRepository.save(
                         new Department(name)
                     );
